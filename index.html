@@ -522,6 +522,15 @@ button:disabled {
           </div>
           <div id="lingRootTable" class="ling-root-table"></div>
         </div>
+
+        <!-- 多存档管理面板 -->
+        <div class="panel">
+          <h2>存档管理</h2>
+          <div class="hint">
+            当前存档槽：<span id="activeSlotSpan">1号</span>（自动保存会写入该槽位）
+          </div>
+          <div id="saveSlotList" class="hint" style="margin-top:8px;"></div>
+        </div>
       </div>
 
       <!-- 游历页 -->
@@ -978,7 +987,6 @@ button:disabled {
     }
 
     function getMethodQiMult() {
-      // 只考虑当前主修心法
       const m = getEquippedMethodSkill();
       if (!m || !m.qiSpeedBonus) return 1;
       return 1 + m.qiSpeedBonus;
@@ -1059,6 +1067,28 @@ button:disabled {
     function getRandomEventText() {
       const idx = Math.floor(Math.random() * RANDOM_EVENTS.length);
       return RANDOM_EVENTS[idx];
+    }
+
+    /* ========== 多存档配置 ========== */
+
+    const NUM_SAVE_SLOTS = 3;
+    const SAVE_SLOT_KEY_PREFIX = 'xiuxianIdleSave_v10_slot_';
+    const ACTIVE_SLOT_KEY = 'xiuxianIdleCurrentSlot_v10';
+    let activeSlot = 0;
+
+    function getSlotKey(slot) {
+      return SAVE_SLOT_KEY_PREFIX + String(slot);
+    }
+
+    function getSlotData(slot) {
+      const raw = localStorage.getItem(getSlotKey(slot));
+      if (!raw) return null;
+      try {
+        return JSON.parse(raw);
+      } catch (e) {
+        console.error('读取槽位存档失败：', slot, e);
+        return null;
+      }
     }
 
     /* ========== 核心状态 ========== */
@@ -1158,22 +1188,153 @@ button:disabled {
         (pillLevel - 1) * (1 + 0.4 * (pillQuality - 1));
     }
 
-    /* ========== 地图 ========= */
+    /* ========== 存档读写逻辑（核心数据 <-> JSON） ========== */
 
-    let MAPS = [];
+    function loadFromData(data) {
+      qi = typeof data.qi === 'number' ? data.qi : 0;
+      baseQiPerSecond =
+        typeof data.baseQiPerSecond === 'number' ? data.baseQiPerSecond : 0.1;
+      baseQiPerClick =
+        typeof data.baseQiPerClick === 'number' ? data.baseQiPerClick : 1.0;
+      realmQpsBonus =
+        typeof data.realmQpsBonus === 'number' ? data.realmQpsBonus : 0;
 
-    function generateMaps() {
-      MAPS = [];
-      for (let s = 0; s < REALM_NAMES.length; s++) {
-        const stageName = REALM_NAMES[s];
-        let rewardMult = 0.6 + s * 0.12;
-        if (rewardMult > 6) rewardMult = 6;
-        MAPS.push({
-          id: 'map_' + s,
-          name: `${stageName} · 游历之地`,
-          enemyStage: s,
-          rewardMult
-        });
+      caveCount =
+        typeof data.caveCount === 'number' ? data.caveCount : 0;
+      caveQuality =
+        typeof data.caveQuality === 'number' ? data.caveQuality : 1;
+      pillLevel =
+        typeof data.pillLevel === 'number' ? data.pillLevel : 1;
+      pillQuality =
+        typeof data.pillQuality === 'number' ? data.pillQuality : 1;
+
+      realmStage = (typeof data.realmStage === 'number') ? data.realmStage : 0;
+
+      if (data.stats && typeof data.stats.power === 'number') {
+        stats = { ...baseStats, ...data.stats };
+      } else {
+        stats = { ...baseStats };
+      }
+
+      abilityPoints = (typeof data.abilityPoints === 'number') ? data.abilityPoints : 0;
+      spiritStones  = (typeof data.spiritStones === 'number') ? data.spiritStones : 0;
+      experience    = (typeof data.experience === 'number') ? data.experience : 0;
+
+      if (typeof data.playerName === 'string') playerName = data.playerName;
+      else playerName = '';
+
+      if (Array.isArray(data.lingRootIds)) {
+        lingRoots = data.lingRootIds
+          .map(id => LING_ROOTS.find(r => r.id === id))
+          .filter(Boolean);
+      } else {
+        lingRoots = [];
+      }
+
+      currentMapId =
+        typeof data.currentMapId === 'string' ? data.currentMapId : 'map_0';
+      autoBattle = !!data.autoBattle;
+      godTitleUnlocked = !!data.godTitleUnlocked;
+      immortalTitle =
+        typeof data.immortalTitle === 'string' ? data.immortalTitle : '';
+      immortalTitleUnlocked = !!data.immortalTitleUnlocked;
+
+      if (Array.isArray(data.learnedSkillIds)) {
+        learnedSkillIds = data.learnedSkillIds.filter(id => !!ALL_SKILLS[id]);
+      } else {
+        learnedSkillIds = [];
+      }
+      if (typeof data.equippedMethodId === 'string' && ALL_SKILLS[data.equippedMethodId]) {
+        equippedMethodId = data.equippedMethodId;
+      } else {
+        equippedMethodId = null;
+      }
+
+      recalcDerivedStats();
+    }
+
+    function saveGameToSlot(slot) {
+      if (slot < 0 || slot >= NUM_SAVE_SLOTS) return;
+      if (!gameStarted) return;
+      const data = {
+        qi,
+        baseQiPerSecond,
+        baseQiPerClick,
+        realmQpsBonus,
+        caveCount,
+        caveQuality,
+        pillLevel,
+        pillQuality,
+        realmStage,
+        stats,
+        abilityPoints,
+        spiritStones,
+        experience,
+        playerName,
+        lingRootIds: lingRoots.map(r => r.id),
+        currentMapId,
+        autoBattle,
+        godTitleUnlocked,
+        immortalTitle,
+        immortalTitleUnlocked,
+        learnedSkillIds,
+        equippedMethodId,
+        lastSaveTime: Date.now()
+      };
+      try {
+        localStorage.setItem(getSlotKey(slot), JSON.stringify(data));
+      } catch (e) {
+        console.error('存档失败：', e);
+      }
+    }
+
+    function saveGame() {
+      if (!gameStarted) return;
+      saveGameToSlot(activeSlot);
+      localStorage.setItem(ACTIVE_SLOT_KEY, String(activeSlot));
+    }
+
+    function loadGameFromSlot(slot) {
+      const raw = localStorage.getItem(getSlotKey(slot));
+      if (!raw) return false;
+      try {
+        const data = JSON.parse(raw);
+        loadFromData(data);
+        activeSlot = slot;
+        localStorage.setItem(ACTIVE_SLOT_KEY, String(activeSlot));
+        gameStarted = !!(playerName && playerName.trim());
+        return true;
+      } catch (e) {
+        console.error('读取存档失败：', e);
+        return false;
+      }
+    }
+
+    function loadGameAtStartup() {
+      const storedSlot = localStorage.getItem(ACTIVE_SLOT_KEY);
+      let slot = 0;
+      if (storedSlot !== null) {
+        const n = parseInt(storedSlot, 10);
+        if (!isNaN(n) && n >= 0 && n < NUM_SAVE_SLOTS) slot = n;
+      }
+      activeSlot = slot;
+      const ok = loadGameFromSlot(activeSlot);
+      if (!ok) {
+        // 简单迁移一下旧版本单存档（如果有）
+        const legacy = localStorage.getItem('xiuxianIdleSave_v9');
+        if (legacy) {
+          try {
+            const data = JSON.parse(legacy);
+            loadFromData(data);
+            activeSlot = 0;
+            gameStarted = !!(playerName && playerName.trim());
+            saveGameToSlot(0);
+            localStorage.setItem(ACTIVE_SLOT_KEY, '0');
+            localStorage.removeItem('xiuxianIdleSave_v9');
+          } catch (e) {
+            console.error('迁移旧存档失败：', e);
+          }
+        }
       }
     }
 
@@ -1245,7 +1406,7 @@ button:disabled {
     const mapSelect = document.getElementById('mapSelect');
     const startBattleBtn = document.getElementById('startBattleBtn');
     const battleResultDiv = document.getElementById('battleResult');
-    const battleLogDiv = document.getElementById('battleLog');
+       const battleLogDiv = document.getElementById('battleLog');
     const autoBattleToggle = document.getElementById('autoBattleToggle');
 
     const battleResultOverlay = document.getElementById('battleResultOverlay');
@@ -1261,7 +1422,9 @@ button:disabled {
     const knownSkillsList = document.getElementById('knownSkillsList');
     const sectOfferList = document.getElementById('sectOfferList');
 
-    const SAVE_KEY = 'xiuxianIdleSave_v9';
+    // 存档 UI DOM
+    const activeSlotSpan = document.getElementById('activeSlotSpan');
+    const saveSlotList = document.getElementById('saveSlotList');
 
     /* ========== 灵根 UI ========== */
 
@@ -1550,6 +1713,135 @@ button:disabled {
       });
     }
 
+    /* ========== 存档管理 UI ========== */
+
+    function updateSaveSlotUI() {
+      if (!activeSlotSpan || !saveSlotList) return;
+      activeSlotSpan.textContent = (activeSlot + 1) + '号';
+
+      saveSlotList.innerHTML = '';
+      for (let i = 0; i < NUM_SAVE_SLOTS; i++) {
+        const data = getSlotData(i);
+        const row = document.createElement('div');
+        row.className = 'upgrade';
+
+        const infoDiv = document.createElement('div');
+        infoDiv.className = 'upgrade-info';
+
+        if (data && data.playerName) {
+          const name = data.playerName || '无名散修';
+          const realmName = getRealmNameFromStage(
+            typeof data.realmStage === 'number' ? data.realmStage : 0
+          );
+          const timeStr = data.lastSaveTime
+            ? new Date(data.lastSaveTime).toLocaleString()
+            : '未知时间';
+          infoDiv.innerHTML =
+            `槽位 ${i + 1}：<strong>${name}</strong>（${realmName}）<br>` +
+            `<span style="font-size:11px;color:#9aa0c6;">上次保存：${timeStr}</span>`;
+        } else {
+          infoDiv.innerHTML =
+            `槽位 ${i + 1}：<span style="color:#9aa0c6;">空存档</span>`;
+        }
+
+        row.appendChild(infoDiv);
+
+        const btnWrap = document.createElement('div');
+        btnWrap.style.display = 'flex';
+        btnWrap.style.flexDirection = 'column';
+        btnWrap.style.gap = '4px';
+
+        const loadBtn = document.createElement('button');
+        loadBtn.className = 'btn-small';
+        loadBtn.textContent = '读取';
+        loadBtn.disabled = !data;
+        loadBtn.addEventListener('click', () => {
+          if (!data) return;
+          if (currentBattle || battleTimerId) {
+            alert('战斗中无法切换存档，请先结束当前游历。');
+            return;
+          }
+          // 读取时暂不强制询问保存，保持原行为
+          const ok = loadGameFromSlot(i);
+          if (ok) {
+            startScreen.style.display = gameStarted ? 'none' : 'flex';
+            updateUI();
+          }
+        });
+
+        const saveBtn = document.createElement('button');
+        saveBtn.className = 'btn-small';
+        saveBtn.textContent = (i === activeSlot ? '保存' : '覆盖');
+        saveBtn.addEventListener('click', () => {
+          if (!gameStarted) {
+            alert('当前没有正在修炼的角色，无法保存。');
+            return;
+          }
+          activeSlot = i;
+          saveGame();
+          updateSaveSlotUI();
+        });
+
+        const clearBtn = document.createElement('button');
+        clearBtn.className = 'btn-small';
+        clearBtn.textContent = '清空';
+        clearBtn.addEventListener('click', () => {
+          if (!confirm(`确定清空 ${i + 1} 号存档吗？`)) return;
+          localStorage.removeItem(getSlotKey(i));
+          // 不自动重置当前游戏，只是清掉该槽数据
+          updateSaveSlotUI();
+        });
+
+        const selectBtn = document.createElement('button');
+        selectBtn.className = 'btn-small';
+        selectBtn.textContent = '选择';
+        selectBtn.addEventListener('click', () => {
+          if (currentBattle || battleTimerId) {
+            alert('战斗中无法切换存档槽，请先结束当前游历。');
+            return;
+          }
+          if (i === activeSlot) {
+            alert('该槽位已经是当前存档槽。');
+            return;
+          }
+
+          if (gameStarted) {
+            const wantSave = confirm(
+              '在切换到新的存档槽前，要先将当前进度保存到当前槽位吗？\n\n“确定”=保存后切换，“取消”=直接切换。'
+            );
+            if (wantSave) {
+              saveGame();
+            }
+          }
+
+          const slotData = getSlotData(i);
+          activeSlot = i;
+          localStorage.setItem(ACTIVE_SLOT_KEY, String(activeSlot));
+
+          if (slotData) {
+            // 该槽已有存档：直接载入
+            loadGameFromSlot(i);
+            startScreen.style.display = gameStarted ? 'none' : 'flex';
+            updateUI();
+          } else {
+            // 该槽为空：以此槽为当前槽，并重置为全新开始
+            resetGame();
+            startScreen.style.display = 'flex';
+            updateSaveSlotUI();
+            updateUI();
+          }
+        });
+
+        btnWrap.appendChild(loadBtn);
+        btnWrap.appendChild(saveBtn);
+        btnWrap.appendChild(clearBtn);
+        btnWrap.appendChild(selectBtn);
+
+        row.appendChild(btnWrap);
+        saveSlotList.appendChild(row);
+      }
+    }
+
     /* ========== 境界加成：每阶段/每大境界加成 ========= */
 
     function applyStageBonus(stage) {
@@ -1792,7 +2084,24 @@ button:disabled {
       return Math.max(1, Math.floor(raw * mitigate));
     }
 
-    /* ========== 地图相关 ========= */
+    /* ========== 地图 ========= */
+
+    let MAPS = [];
+
+    function generateMaps() {
+      MAPS = [];
+      for (let s = 0; s < REALM_NAMES.length; s++) {
+        const stageName = REALM_NAMES[s];
+        let rewardMult = 0.6 + s * 0.12;
+        if (rewardMult > 6) rewardMult = 6;
+        MAPS.push({
+          id: 'map_' + s,
+          name: `${stageName} · 游历之地`,
+          enemyStage: s,
+          rewardMult
+        });
+      }
+    }
 
     function initMaps() {
       mapSelect.innerHTML = '';
@@ -1853,108 +2162,7 @@ button:disabled {
       };
     }
 
-    /* ========== 存档系统 ========== */
-
-    function saveGame() {
-      const data = {
-        qi,
-        baseQiPerSecond,
-        baseQiPerClick,
-        realmQpsBonus,
-        caveCount,
-        caveQuality,
-        pillLevel,
-        pillQuality,
-        realmStage,
-        stats,
-        abilityPoints,
-        spiritStones,
-        experience,
-        playerName,
-        lingRootIds: lingRoots.map(r => r.id),
-        currentMapId,
-        autoBattle,
-        godTitleUnlocked,
-        immortalTitle,
-        immortalTitleUnlocked,
-        learnedSkillIds,
-        equippedMethodId
-      };
-      try {
-        localStorage.setItem(SAVE_KEY, JSON.stringify(data));
-      } catch (e) {
-        console.error('存档失败：', e);
-      }
-    }
-
-    function loadGame() {
-      const raw = localStorage.getItem(SAVE_KEY);
-      if (!raw) return;
-      try {
-        const data = JSON.parse(raw);
-        if (typeof data.qi === 'number') qi = data.qi;
-        baseQiPerSecond =
-          typeof data.baseQiPerSecond === 'number' ? data.baseQiPerSecond : 0.1;
-        baseQiPerClick =
-          typeof data.baseQiPerClick === 'number' ? data.baseQiPerClick : 1.0;
-        realmQpsBonus =
-          typeof data.realmQpsBonus === 'number' ? data.realmQpsBonus : 0;
-
-        caveCount =
-          typeof data.caveCount === 'number' ? data.caveCount : 0;
-        caveQuality =
-          typeof data.caveQuality === 'number' ? data.caveQuality : 1;
-        pillLevel =
-          typeof data.pillLevel === 'number' ? data.pillLevel : 1;
-        pillQuality =
-          typeof data.pillQuality === 'number' ? data.pillQuality : 1;
-
-        realmStage = (typeof data.realmStage === 'number') ? data.realmStage : 0;
-
-        if (data.stats && typeof data.stats.power === 'number') {
-          stats = { ...baseStats, ...data.stats };
-        } else {
-          stats = { ...baseStats };
-        }
-
-        abilityPoints = (typeof data.abilityPoints === 'number') ? data.abilityPoints : 0;
-        spiritStones  = (typeof data.spiritStones === 'number') ? data.spiritStones : 0;
-        experience    = (typeof data.experience === 'number') ? data.experience : 0;
-
-        if (typeof data.playerName === 'string') playerName = data.playerName;
-
-        if (Array.isArray(data.lingRootIds)) {
-          lingRoots = data.lingRootIds
-            .map(id => LING_ROOTS.find(r => r.id === id))
-            .filter(Boolean);
-        } else {
-          lingRoots = [];
-        }
-
-        if (typeof data.currentMapId === 'string') {
-          currentMapId = data.currentMapId;
-        }
-
-        autoBattle = !!data.autoBattle;
-        godTitleUnlocked = !!data.godTitleUnlocked;
-        immortalTitle = typeof data.immortalTitle === 'string' ? data.immortalTitle : '';
-        immortalTitleUnlocked = !!data.immortalTitleUnlocked;
-
-        if (Array.isArray(data.learnedSkillIds)) {
-          learnedSkillIds = data.learnedSkillIds.filter(id => !!ALL_SKILLS[id]);
-        } else {
-          learnedSkillIds = [];
-        }
-        if (typeof data.equippedMethodId === 'string' && ALL_SKILLS[data.equippedMethodId]) {
-          equippedMethodId = data.equippedMethodId;
-        } else {
-          equippedMethodId = null;
-        }
-      } catch (e) {
-        console.error('读取存档失败：', e);
-      }
-      recalcDerivedStats();
-    }
+    /* ========== 重置（只清空当前槽位） ========== */
 
     function resetGame() {
       qi = 0;
@@ -1983,12 +2191,15 @@ button:disabled {
       immortalTitleUnlocked = false;
       learnedSkillIds = [];
       equippedMethodId = null;
-      localStorage.removeItem(SAVE_KEY);
+
+      localStorage.removeItem(getSlotKey(activeSlot));
+
       playerNameInput.value = '';
       battleLogDiv.innerHTML = '';
       battleResultDiv.textContent = '';
-      startScreen.style.display = 'flex';
       autoBattleToggle.checked = false;
+
+      startScreen.style.display = 'flex';
     }
 
     /* ========== UI 切换 & 更新 ========== */
@@ -2091,6 +2302,7 @@ button:disabled {
 
       updateLingRootUI();
       updateBattleStatsUI();
+      updateSaveSlotUI();
 
       if (currentPage === 'skills') {
         updateSkillsUI();
@@ -2392,7 +2604,7 @@ button:disabled {
           }
         }
 
-        // 如果拥有「次元裂斩」，且尚未施展过，则在本回合优先使用一次
+        // 次元裂斩（如果存在）
         if (eff.burstDimSlash && !b.skillState.dimSlashUsed) {
           b.skillState.dimSlashUsed = true;
           const baseDmg = calcDamage(b.player.atk, b.enemy.physique, b.enemy.root);
@@ -2647,12 +2859,13 @@ button:disabled {
 
     saveBtn.addEventListener('click', () => {
       saveGame();
+      updateSaveSlotUI();
       saveBtn.textContent = '已保存 ✔';
       setTimeout(() => { saveBtn.textContent = '手动保存'; }, 1000);
     });
 
     resetBtn.addEventListener('click', () => {
-      if (confirm('确定要清空存档并从凡人境界重新修炼吗？')) {
+      if (confirm('确定要清空当前存档槽并从凡人境界重新修炼吗？（仅影响当前槽位）')) {
         resetGame();
         updateUI();
         switchPage('cultivation');
@@ -2702,10 +2915,10 @@ button:disabled {
     /* ========== 初始化 ========== */
 
     generateMaps();
-    loadGame();
+    loadGameAtStartup();
     initMaps();
 
-    if (playerName) {
+    if (playerName && playerName.trim()) {
       gameStarted = true;
       startScreen.style.display = 'none';
     } else {
@@ -2716,7 +2929,6 @@ button:disabled {
     switchPage('cultivation');
     updateUI();
 
-    // 读档后如果已经开启自动战斗，直接自动开局
     if (gameStarted && autoBattle) {
       maybeStartAutoBattle();
     }
