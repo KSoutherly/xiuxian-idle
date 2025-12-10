@@ -288,7 +288,7 @@ button:disabled {
 }
 
 .start-card input {
-  width: 85%;
+  width: 80%; /* 缩短一点输入框 */
   padding: 8px 12px;
   border-radius: 999px;
   border: none;
@@ -353,6 +353,37 @@ button:disabled {
   color: #c0c6ff;
   margin-bottom: 10px;
 }
+
+/* ====== 功法 / 宗门 / 技能展示 ====== */
+.skill-item {
+  border-radius: 8px;
+  padding: 6px 8px;
+  margin-bottom: 6px;
+  background: rgba(20, 24, 48, 0.9);
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 12px;
+}
+
+.skill-left {
+  flex: 1;
+}
+
+.skill-name {
+  font-size: 13px;
+  font-weight: bold;
+  margin-bottom: 2px;
+}
+
+/* 稀有度颜色：凡品、罕见、稀有、珍品、绝品、仙法 */
+.skill-rarity-common { color: #f5f5f5; }
+.skill-rarity-uncommon { color: #6cff8f; }
+.skill-rarity-rare { color: #4ea1ff; }
+.skill-rarity-epic { color: #c47dff; }
+.skill-rarity-legendary { color: #ffd86b; }
+.skill-rarity-mythic { color: #ff6666; }
 
 /* 大屏幕（可选） */
 @media (min-width: 900px) {
@@ -486,7 +517,8 @@ button:disabled {
           <h2>灵根天赋</h2>
           <div class="hint">
             灵根不直接改变战斗数值，但会极大影响修炼速度、能力点掉落与奇遇触发。<br>
-            当前灵根系统加成：<span id="lingRootBonusText">修炼速度 +0% · 能力点 +0% · 奇遇权重 +0%</span>
+            修炼心法后，可进一步放大灵根效果。
+            <br>当前灵根系统加成：<span id="lingRootBonusText">修炼速度 +0% · 能力点 +0% · 奇遇权重 +0%</span>
           </div>
           <div id="lingRootTable" class="ling-root-table"></div>
         </div>
@@ -569,6 +601,42 @@ button:disabled {
             品质越高，每一层丹药提供的额外打坐真气越多。未来可以在此扩展更多丹药与功法。
           </div>
         </div>
+
+        <div class="panel">
+          <h2>灵石市集 · 武技</h2>
+          <div class="hint">
+            在此可购买基础武技卷轴，习得后将在战斗中提供持续增益。
+          </div>
+          <div id="shopSkillList" class="hint" style="margin-top:8px;"></div>
+        </div>
+      </div>
+
+      <!-- 功法页 -->
+      <div id="pageSkills" style="width:100%; display:none;">
+        <div class="panel">
+          <h2>功法总览</h2>
+          <div class="hint">
+            这里可以查看你已经修炼的心法、掌握的秘籍与武技。<br>
+            心法与灵根契合，可大幅提升修炼速度；秘籍与武技多在战斗中发挥威力。
+          </div>
+          <div id="activeMethodInfo" class="hint" style="margin-top:8px;">
+            当前尚未修炼任何心法。
+          </div>
+          <div id="knownSkillsList" class="hint" style="margin-top:8px;"></div>
+        </div>
+      </div>
+
+      <!-- 宗门页 -->
+      <div id="pageSect" style="width:100%; display:none;">
+        <div class="panel">
+          <h2>宗门传承</h2>
+          <div class="hint">
+            你可在此消耗灵石，向虚拟宗门购买/学习功法与秘籍。<br>
+            功法多为心法，激活灵根潜力并提升修炼速度；秘籍则在战斗中发挥巨大威力。<br>
+            只能学习与自身灵根相符的心法/秘籍。
+          </div>
+          <div id="sectOfferList" class="hint" style="margin-top:8px;"></div>
+        </div>
       </div>
     </div>
 
@@ -585,6 +653,14 @@ button:disabled {
       <div class="nav-item" data-page="shop">
         <div class="nav-icon">🛒</div>
         <div class="nav-label">市集</div>
+      </div>
+      <div class="nav-item" data-page="skills">
+        <div class="nav-icon">📜</div>
+        <div class="nav-label">功法</div>
+      </div>
+      <div class="nav-item" data-page="sect">
+        <div class="nav-icon">⛩️</div>
+        <div class="nav-label">宗门</div>
       </div>
     </div>
   </div>
@@ -747,6 +823,165 @@ button:disabled {
           return [basicPool[idx1], basicPool[idx2]];
         }
       }
+    }
+
+    /* ========== 功法 / 秘籍 / 武技 定义 ========== */
+
+    const SKILL_RARITY_META = {
+      common:    { label: '凡品', className: 'skill-rarity-common' },
+      uncommon:  { label: '罕见', className: 'skill-rarity-uncommon' },
+      rare:      { label: '稀有', className: 'skill-rarity-rare' },
+      epic:      { label: '珍品', className: 'skill-rarity-epic' },
+      legendary: { label: '绝品', className: 'skill-rarity-legendary' },
+      mythic:    { label: '仙法', className: 'skill-rarity-mythic' }
+    };
+
+    // type: method=心法, manual=秘籍, technique=武技
+    // source: sect / sectAndDrop / shop / shopAndDrop / drop
+    const ALL_SKILLS = {
+      // 示例一：心法·时如心流（时间灵根专属，仙法）
+      method_time_flow: {
+        id: 'method_time_flow',
+        name: '心法·时如心流',
+        type: 'method',
+        rarity: 'mythic',
+        source: 'sect',
+        price: 100000,
+        qiSpeedBonus: 0.5, // +50% 修炼速度
+        requirement: {
+          type: 'rootAnyOf',
+          ids: ['time']
+        },
+        desc: '时间如心中溪流，念起即流转。限定时间灵根者修炼，修炼速度 +50%。'
+      },
+      // 示例二：仙法秘籍·次元裂斩（空间灵根专属，战斗中一次性爆发）
+      manual_dimensional_slash: {
+        id: 'manual_dimensional_slash',
+        name: '秘籍·次元裂斩',
+        type: 'manual',
+        rarity: 'mythic',
+        source: 'sectAndDrop',
+        price: 100000,
+        requirement: {
+          type: 'rootAnyOf',
+          ids: ['space']
+        },
+        // battle 标记给战斗系统用
+        battle: {
+          burstDimSlash: true
+        },
+        desc: '限定空间灵根者修炼。战斗中可在某一回合斩出次元裂缝，对敌人造成约 2000% 的普通攻击伤害。'
+      },
+      // 基础五行心法：任何拥有五行灵根者都可修
+      method_five_cycle: {
+        id: 'method_five_cycle',
+        name: '心法·五行循环诀',
+        type: 'method',
+        rarity: 'rare',
+        source: 'sect',
+        price: 8000,
+        qiSpeedBonus: 0.2, // +20%
+        requirement: {
+          type: 'basicAny'
+        },
+        desc: '调和五行之气，使周身灵力循环不息。需具备任意五行灵根，修炼速度 +20%。'
+      },
+      // 武技：基础快斩，可在市集购买或掉落，增加攻击与暴击率
+      tech_quick_strike: {
+        id: 'tech_quick_strike',
+        name: '武技·闪风快斩',
+        type: 'technique',
+        rarity: 'uncommon',
+        source: 'shopAndDrop',
+        price: 2500,
+        requirement: null,
+        battle: {
+          atkMul: 1.12,       // 攻击 +12%
+          critChance: 0.08    // 额外 8% 暴击率
+        },
+        desc: '简单实用的近身快斩武技，适合大多数近战修士。被动提升攻击与少量暴击率。'
+      },
+      // 武技：铁骨护身，可在市集购买或掉落，增加生命与减伤
+      tech_iron_body: {
+        id: 'tech_iron_body',
+        name: '武技·铁骨护身诀',
+        type: 'technique',
+        rarity: 'rare',
+        source: 'shopAndDrop',
+        price: 5000,
+        requirement: null,
+        battle: {
+          hpMul: 1.18,            // 生命 +18%
+          damageTakenMul: 0.92    // 受到伤害 -8%
+        },
+        desc: '锤炼肉身与根骨，使筋骨如钢铁般坚韧。被动提升生命上限并降低所受伤害。'
+      }
+    };
+
+    /* ========== 功法状态 ========== */
+
+    let learnedSkillIds = [];   // 已习得功法/秘籍/武技 id 列表
+    let equippedMethodId = null; // 当前主修心法 id（最多一个）
+
+    function getSkillById(id) {
+      return ALL_SKILLS[id] || null;
+    }
+
+    function hasSkill(id) {
+      return learnedSkillIds.includes(id);
+    }
+
+    function addSkill(id) {
+      if (!ALL_SKILLS[id]) return false;
+      if (!learnedSkillIds.includes(id)) {
+        learnedSkillIds.push(id);
+        return true;
+      }
+      return false;
+    }
+
+    function getSkillRarityMeta(skill) {
+      return SKILL_RARITY_META[skill.rarity] || SKILL_RARITY_META.common;
+    }
+
+    function checkSkillRequirement(skill) {
+      if (!skill.requirement) return true;
+      if (!lingRoots || lingRoots.length === 0) return false;
+      const req = skill.requirement;
+      if (req.type === 'rootAnyOf') {
+        return lingRoots.some(r => req.ids.includes(r.id));
+      }
+      if (req.type === 'basicAny') {
+        return lingRoots.some(r => r.type === 'basic');
+      }
+      return true;
+    }
+
+    function getSkillRequirementText(skill) {
+      if (!skill.requirement) return '无特殊限制';
+      const req = skill.requirement;
+      if (req.type === 'rootAnyOf') {
+        const names = req.ids.map(id => LING_ROOTS.find(r => r.id === id))
+          .filter(Boolean)
+          .map(r => r.name);
+        return '限定灵根：' + (names.join(' / ') || '特定灵根');
+      }
+      if (req.type === 'basicAny') {
+        return '需具备任意五行灵根（金木水火土之一）';
+      }
+      return '特殊限制';
+    }
+
+    function getEquippedMethodSkill() {
+      if (!equippedMethodId) return null;
+      return ALL_SKILLS[equippedMethodId] || null;
+    }
+
+    function getMethodQiMult() {
+      // 只考虑当前主修心法
+      const m = getEquippedMethodSkill();
+      if (!m || !m.qiSpeedBonus) return 1;
+      return 1 + m.qiSpeedBonus;
     }
 
     /* ========== 境界定义：凡人 + 11 个大境界，每个前中后大圆满 ========= */
@@ -983,6 +1218,8 @@ button:disabled {
     const pageCultivation = document.getElementById('pageCultivation');
     const pageBattle = document.getElementById('pageBattle');
     const pageShop = document.getElementById('pageShop');
+    const pageSkills = document.getElementById('pageSkills');
+    const pageSect = document.getElementById('pageSect');
     const navItems = document.querySelectorAll('.nav-item');
 
     const caveCostSpan = document.getElementById('caveCost');
@@ -1001,6 +1238,8 @@ button:disabled {
     const buyPillBtn = document.getElementById('buyPillBtn');
     const upgradePillBtn = document.getElementById('upgradePillBtn');
 
+    const shopSkillList = document.getElementById('shopSkillList');
+
     // 游历
     const playerBattleStatsDiv = document.getElementById('playerBattleStats');
     const mapSelect = document.getElementById('mapSelect');
@@ -1017,7 +1256,12 @@ button:disabled {
     const randomEventDiv = document.getElementById('randomEvent');
     const closeResultBtn = document.getElementById('closeResultBtn');
 
-    const SAVE_KEY = 'xiuxianIdleSave_v8';
+    // 功法页 DOM
+    const activeMethodInfo = document.getElementById('activeMethodInfo');
+    const knownSkillsList = document.getElementById('knownSkillsList');
+    const sectOfferList = document.getElementById('sectOfferList');
+
+    const SAVE_KEY = 'xiuxianIdleSave_v9';
 
     /* ========== 灵根 UI ========== */
 
@@ -1078,6 +1322,232 @@ button:disabled {
       extra.className = 'ling-root-row';
       extra.innerHTML = `<span>系统加成：</span><span>${getLingRootTierMeta().label}</span>`;
       lingRootTableDiv.appendChild(extra);
+    }
+
+    /* ========== 功法页 / 宗门 / 商店技能 UI ========== */
+
+    function updateSkillsUI() {
+      if (!activeMethodInfo || !knownSkillsList) return;
+
+      if (!gameStarted) {
+        activeMethodInfo.textContent = '尚未开始修炼。';
+        knownSkillsList.textContent = '暂无任何功法或武技。';
+        return;
+      }
+
+      const method = getEquippedMethodSkill();
+      if (!method) {
+        activeMethodInfo.textContent =
+          '当前未主修任何心法。可前往「宗门」学习与灵根契合的功法，以进一步提升修炼速度。';
+      } else {
+        const rar = getSkillRarityMeta(method);
+        const bonusPercent = method.qiSpeedBonus ? Math.round(method.qiSpeedBonus * 100) : 0;
+        activeMethodInfo.innerHTML =
+          `当前主修：<span class="skill-name ${rar.className}">${method.name}（${rar.label}·心法）</span> · ` +
+          `效果：修炼速度 +${bonusPercent}%。`;
+      }
+
+      if (!learnedSkillIds.length) {
+        knownSkillsList.textContent = '你尚未掌握任何功法或武技。';
+        return;
+      }
+
+      knownSkillsList.innerHTML = '';
+      learnedSkillIds.forEach(id => {
+        const skill = getSkillById(id);
+        if (!skill) return;
+        const rar = getSkillRarityMeta(skill);
+        const wrapper = document.createElement('div');
+        wrapper.className = 'skill-item';
+
+        const left = document.createElement('div');
+        left.className = 'skill-left';
+        const typeLabel =
+          skill.type === 'method' ? '心法'
+          : skill.type === 'manual' ? '秘籍'
+          : '武技';
+        left.innerHTML =
+          `<div class="skill-name ${rar.className}">${skill.name}（${rar.label}·${typeLabel}）</div>` +
+          `<div>${skill.desc || ''}</div>`;
+
+        const right = document.createElement('div');
+        right.style.display = 'flex';
+        right.style.flexDirection = 'column';
+        right.style.alignItems = 'flex-end';
+        right.style.gap = '4px';
+
+        const reqText = getSkillRequirementText(skill);
+        const spanReq = document.createElement('div');
+        spanReq.style.fontSize = '11px';
+        spanReq.style.color = '#9aa0c6';
+        spanReq.textContent = reqText;
+        right.appendChild(spanReq);
+
+        if (skill.type === 'method') {
+          const btn = document.createElement('button');
+          btn.className = 'btn-small';
+          if (equippedMethodId === skill.id) {
+            btn.textContent = '已主修';
+            btn.disabled = true;
+          } else {
+            btn.textContent = '设为主修';
+            btn.addEventListener('click', () => {
+              equippedMethodId = skill.id;
+              updateUI();
+              saveGame();
+            });
+          }
+          right.appendChild(btn);
+        }
+
+        wrapper.appendChild(left);
+        wrapper.appendChild(right);
+        knownSkillsList.appendChild(wrapper);
+      });
+    }
+
+    function refreshSectOfferingsUI() {
+      if (!sectOfferList) return;
+      sectOfferList.innerHTML = '';
+      if (!gameStarted) {
+        sectOfferList.textContent = '请先踏入修仙并取一个道号。';
+        return;
+      }
+
+      const offerSkills = Object.values(ALL_SKILLS).filter(skill =>
+        skill.source === 'sect' || skill.source === 'sectAndDrop'
+      );
+
+      if (!offerSkills.length) {
+        sectOfferList.textContent = '宗门暂未开放传承。';
+        return;
+      }
+
+      offerSkills.forEach(skill => {
+        const rar = getSkillRarityMeta(skill);
+        const wrapper = document.createElement('div');
+        wrapper.className = 'skill-item';
+
+        const left = document.createElement('div');
+        left.className = 'skill-left';
+        const typeLabel =
+          skill.type === 'method' ? '心法'
+          : skill.type === 'manual' ? '秘籍'
+          : '武技';
+        left.innerHTML =
+          `<div class="skill-name ${rar.className}">${skill.name}（${rar.label}·${typeLabel}）</div>` +
+          `<div>${skill.desc || ''}</div>` +
+          `<div style="font-size:11px;color:#b6c1ff;">价格：${skill.price} 灵石</div>` +
+          `<div style="font-size:11px;color:#9aa0c6;">${getSkillRequirementText(skill)}</div>`;
+
+        const right = document.createElement('div');
+        right.style.display = 'flex';
+        right.style.flexDirection = 'column';
+        right.style.alignItems = 'flex-end';
+        right.style.gap = '4px';
+
+        const btn = document.createElement('button');
+        btn.className = 'btn-small';
+
+        const alreadyLearned = hasSkill(skill.id);
+        const reqOK = checkSkillRequirement(skill);
+        if (alreadyLearned) {
+          btn.textContent = '已掌握';
+          btn.disabled = true;
+        } else if (!reqOK) {
+          btn.textContent = '灵根不符';
+          btn.disabled = true;
+        } else {
+          btn.textContent = '学习';
+          btn.disabled = spiritStones < skill.price;
+          btn.addEventListener('click', () => {
+            if (spiritStones < skill.price) {
+              alert('灵石不足，无法学习此功法。');
+              return;
+            }
+            if (!checkSkillRequirement(skill)) {
+              alert('你的灵根与此功法不符，暂无法修炼。');
+              return;
+            }
+            spiritStones -= skill.price;
+            addSkill(skill.id);
+            if (skill.type === 'method' && !equippedMethodId) {
+              equippedMethodId = skill.id;
+            }
+            updateUI();
+            refreshSectOfferingsUI();
+            saveGame();
+          });
+        }
+        right.appendChild(btn);
+
+        wrapper.appendChild(left);
+        wrapper.appendChild(right);
+        sectOfferList.appendChild(wrapper);
+      });
+    }
+
+    function refreshShopSkillsUI() {
+      if (!shopSkillList) return;
+      shopSkillList.innerHTML = '';
+      if (!gameStarted) {
+        shopSkillList.textContent = '请先开始修炼。';
+        return;
+      }
+
+      const skills = Object.values(ALL_SKILLS).filter(skill =>
+        skill.source === 'shop' || skill.source === 'shopAndDrop'
+      );
+      if (!skills.length) {
+        shopSkillList.textContent = '市集中暂未有可购买的武技卷轴。';
+        return;
+      }
+
+      skills.forEach(skill => {
+        const rar = getSkillRarityMeta(skill);
+        const wrapper = document.createElement('div');
+        wrapper.className = 'skill-item';
+
+        const left = document.createElement('div');
+        left.className = 'skill-left';
+        left.innerHTML =
+          `<div class="skill-name ${rar.className}">${skill.name}（${rar.label}·武技）</div>` +
+          `<div>${skill.desc || ''}</div>` +
+          `<div style="font-size:11px;color:#b6c1ff;">价格：${skill.price} 灵石</div>`;
+
+        const right = document.createElement('div');
+        right.style.display = 'flex';
+        right.style.flexDirection = 'column';
+        right.style.alignItems = 'flex-end';
+        right.style.gap = '4px';
+
+        const btn = document.createElement('button');
+        btn.className = 'btn-small';
+
+        if (hasSkill(skill.id)) {
+          btn.textContent = '已掌握';
+          btn.disabled = true;
+        } else {
+          btn.textContent = '购买';
+          btn.disabled = spiritStones < skill.price;
+          btn.addEventListener('click', () => {
+            if (spiritStones < skill.price) {
+              alert('灵石不足，无法购买此武技卷轴。');
+              return;
+            }
+            spiritStones -= skill.price;
+            addSkill(skill.id);
+            updateUI();
+            refreshShopSkillsUI();
+            saveGame();
+          });
+        }
+        right.appendChild(btn);
+
+        wrapper.appendChild(left);
+        wrapper.appendChild(right);
+        shopSkillList.appendChild(wrapper);
+      });
     }
 
     /* ========== 境界加成：每阶段/每大境界加成 ========= */
@@ -1238,9 +1708,9 @@ button:disabled {
         `闪避 ${(base.dodge * 100).toFixed(1)}% · 速度 ${base.spd}`;
     }
 
-    // 灵根不影响战斗数值（预留）
-    function getLingRootBattleEffects() {
-      return {
+    // 技能战斗被动效果聚合
+    function getSkillBattleEffects() {
+      const eff = {
         atkMul: 1,
         hpMul: 1,
         speedMul: 1,
@@ -1252,9 +1722,62 @@ button:disabled {
         critChance: 0,
         critMul: 1.5,
         extraTurnChance: 0,
-        sleepChance: 0,
-        heartRage: false
+        burstDimSlash: false
       };
+
+      learnedSkillIds.forEach(id => {
+        const s = getSkillById(id);
+        if (!s || !s.battle) return;
+        const b = s.battle;
+        if (b.atkMul) eff.atkMul *= b.atkMul;
+        if (b.hpMul) eff.hpMul *= b.hpMul;
+        if (b.speedMul) eff.speedMul *= b.speedMul;
+        if (b.dodgeBonus) eff.dodgeBonus += b.dodgeBonus;
+        if (b.damageTakenMul) eff.damageTakenMul *= b.damageTakenMul;
+        if (b.enemySpeedMul) eff.enemySpeedMul *= b.enemySpeedMul;
+        if (b.lifeSteal) eff.lifeSteal += b.lifeSteal;
+        if (b.regenPerTurn) eff.regenPerTurn += b.regenPerTurn;
+        if (b.critChance) eff.critChance += b.critChance;
+        if (b.critMul) eff.critMul = Math.max(eff.critMul, b.critMul);
+        if (b.extraTurnChance) eff.extraTurnChance += b.extraTurnChance;
+        if (b.burstDimSlash) eff.burstDimSlash = true;
+      });
+
+      if (eff.critChance > 0.5) eff.critChance = 0.5;
+      if (eff.dodgeBonus > 0.3) eff.dodgeBonus = 0.3;
+      return eff;
+    }
+
+    // 灵根战斗被动（目前留空，将来可以叠加）
+    function getLingRootBattleEffects() {
+      const baseEff = {
+        atkMul: 1,
+        hpMul: 1,
+        speedMul: 1,
+        dodgeBonus: 0,
+        damageTakenMul: 1,
+        enemySpeedMul: 1,
+        lifeSteal: 0,
+        regenPerTurn: 0,
+        critChance: 0,
+        critMul: 1.5,
+        extraTurnChance: 0,
+        burstDimSlash: false
+      };
+      const skillEff = getSkillBattleEffects();
+      baseEff.atkMul *= skillEff.atkMul;
+      baseEff.hpMul *= skillEff.hpMul;
+      baseEff.speedMul *= skillEff.speedMul;
+      baseEff.dodgeBonus += skillEff.dodgeBonus;
+      baseEff.damageTakenMul *= skillEff.damageTakenMul;
+      baseEff.enemySpeedMul *= skillEff.enemySpeedMul;
+      baseEff.lifeSteal += skillEff.lifeSteal;
+      baseEff.regenPerTurn += skillEff.regenPerTurn;
+      baseEff.critChance += skillEff.critChance;
+      baseEff.critMul = Math.max(baseEff.critMul, skillEff.critMul);
+      baseEff.extraTurnChance += skillEff.extraTurnChance;
+      baseEff.burstDimSlash = skillEff.burstDimSlash;
+      return baseEff;
     }
 
     /* ========== 伤害公式 ========= */
@@ -1353,7 +1876,9 @@ button:disabled {
         autoBattle,
         godTitleUnlocked,
         immortalTitle,
-        immortalTitleUnlocked
+        immortalTitleUnlocked,
+        learnedSkillIds,
+        equippedMethodId
       };
       try {
         localStorage.setItem(SAVE_KEY, JSON.stringify(data));
@@ -1414,6 +1939,17 @@ button:disabled {
         godTitleUnlocked = !!data.godTitleUnlocked;
         immortalTitle = typeof data.immortalTitle === 'string' ? data.immortalTitle : '';
         immortalTitleUnlocked = !!data.immortalTitleUnlocked;
+
+        if (Array.isArray(data.learnedSkillIds)) {
+          learnedSkillIds = data.learnedSkillIds.filter(id => !!ALL_SKILLS[id]);
+        } else {
+          learnedSkillIds = [];
+        }
+        if (typeof data.equippedMethodId === 'string' && ALL_SKILLS[data.equippedMethodId]) {
+          equippedMethodId = data.equippedMethodId;
+        } else {
+          equippedMethodId = null;
+        }
       } catch (e) {
         console.error('读取存档失败：', e);
       }
@@ -1445,6 +1981,8 @@ button:disabled {
       godTitleUnlocked = false;
       immortalTitle = '';
       immortalTitleUnlocked = false;
+      learnedSkillIds = [];
+      equippedMethodId = null;
       localStorage.removeItem(SAVE_KEY);
       playerNameInput.value = '';
       battleLogDiv.innerHTML = '';
@@ -1460,21 +1998,33 @@ button:disabled {
       pageCultivation.style.display = (page === 'cultivation') ? 'block' : 'none';
       pageBattle.style.display      = (page === 'battle')      ? 'block' : 'none';
       pageShop.style.display        = (page === 'shop')        ? 'block' : 'none';
+      pageSkills.style.display      = (page === 'skills')      ? 'block' : 'none';
+      pageSect.style.display        = (page === 'sect')        ? 'block' : 'none';
 
       navItems.forEach(item => {
         item.classList.toggle('active', item.dataset.page === page);
       });
 
-      // 切到游历页且已开启自动战斗时，如果没有战斗就自动开一局
       if (page === 'battle') {
         maybeStartAutoBattle();
+      }
+      if (page === 'skills') {
+        updateSkillsUI();
+      }
+      if (page === 'sect') {
+        refreshSectOfferingsUI();
+      }
+      if (page === 'shop') {
+        refreshShopSkillsUI();
       }
     }
 
     function updateUI() {
       const meta = getLingRootTierMeta();
-      const effectiveQps = qiPerSecond * meta.qiMult;
-      const effectiveQpc = qiPerClick * meta.qiMult;
+      const methodMult = getMethodQiMult();
+
+      const effectiveQps = qiPerSecond * meta.qiMult * methodMult;
+      const effectiveQpc = qiPerClick * meta.qiMult * methodMult;
 
       qiSpan.textContent  = qi.toFixed(1);
       qpsSpan.textContent = effectiveQps.toFixed(1);
@@ -1541,6 +2091,16 @@ button:disabled {
 
       updateLingRootUI();
       updateBattleStatsUI();
+
+      if (currentPage === 'skills') {
+        updateSkillsUI();
+      }
+      if (currentPage === 'sect') {
+        refreshSectOfferingsUI();
+      }
+      if (currentPage === 'shop') {
+        refreshShopSkillsUI();
+      }
     }
 
     /* ========== 游历日志 & 结算 ========= */
@@ -1638,7 +2198,46 @@ button:disabled {
       return { triggered, text, extraQi, extraStones, extraAbility, breakthrough };
     }
 
-    function showBattleResultOverlay(outcome, battleData, rewards, eventInfo) {
+    function tryDropSkillFromBattle() {
+      if (!gameStarted) return null;
+      const candidates = Object.values(ALL_SKILLS).filter(skill =>
+        (skill.source === 'drop' || skill.source === 'sectAndDrop' || skill.source === 'shopAndDrop') &&
+        !hasSkill(skill.id)
+      );
+      if (!candidates.length) return null;
+
+      const meta = getLingRootTierMeta();
+      const baseChance = 0.02;
+      const luckBonus = stats.luck * 0.0015;
+      let chance = (baseChance + luckBonus) * meta.eventMult;
+      if (chance > 0.2) chance = 0.2;
+
+      if (Math.random() >= chance) return null;
+
+      const weights = candidates.map(skill => {
+        switch (skill.rarity) {
+          case 'common': return 6;
+          case 'uncommon': return 4;
+          case 'rare': return 3;
+          case 'epic': return 2;
+          case 'legendary': return 1.2;
+          case 'mythic': return 0.5;
+          default: return 1;
+        }
+      });
+      let total = weights.reduce((a, b) => a + b, 0);
+      let r = Math.random() * total;
+      let idx = 0;
+      for (let i = 0; i < candidates.length; i++) {
+        r -= weights[i];
+        if (r <= 0) { idx = i; break; }
+      }
+      const skill = candidates[idx];
+      addSkill(skill.id);
+      return skill;
+    }
+
+    function showBattleResultOverlay(outcome, battleData, rewards, eventInfo, droppedSkill) {
       resultTitle.textContent =
         outcome === 'win' ? '游历胜利'
         : outcome === 'lose' ? '游历受挫'
@@ -1656,12 +2255,15 @@ button:disabled {
       summaryLines.push(`本次游历共进行了 ${battleData.turn - 1} 个回合。`);
       resultSummary.textContent = summaryLines.join(' ');
 
-      const dropsText = [
+      let dropsText = [
         rewards.qiReward > 0     ? `真气：+${rewards.qiReward}` : null,
         rewards.expGain > 0      ? `历练值：+${rewards.expGain}（总历练：${experience}）` : `历练值：无增长`,
         rewards.abilityGain > 0  ? `能力点：+${rewards.abilityGain}（可用：${abilityPoints}）` : null,
         rewards.stoneReward > 0  ? `灵石：+${rewards.stoneReward}（总计：${spiritStones}）` : null
       ].filter(Boolean).join(' · ');
+      if (droppedSkill) {
+        dropsText += (dropsText ? ' · ' : '') + `新得功法：${droppedSkill.name}`;
+      }
       resultDrops.textContent = dropsText || '本次未获得显著战利品。';
 
       let extra = '';
@@ -1724,6 +2326,10 @@ button:disabled {
       if (stoneReward > 0) spiritStones += stoneReward;
 
       const eventInfo = handleRandomEncounter(outcome, battleData);
+      const droppedSkill = tryDropSkillFromBattle();
+      if (droppedSkill) {
+        eventInfo.text = (eventInfo.text || '') + ` 此外，你在战场上意外获得了一卷《${droppedSkill.name}》。`;
+      }
 
       const abilityGain = abilityPoints - abilityBefore;
       const totalExpGain = experience - expBefore;
@@ -1731,7 +2337,6 @@ button:disabled {
 
       updateUI();
 
-      // 自动战斗模式下不弹结算窗口
       const shouldShowOverlay = !autoBattle;
       if (shouldShowOverlay) {
         showBattleResultOverlay(outcome, battleData, {
@@ -1739,10 +2344,14 @@ button:disabled {
           stoneReward: totalStoneReward,
           expGain: totalExpGain,
           abilityGain
-        }, eventInfo);
+        }, eventInfo, droppedSkill);
       } else {
-        battleResultDiv.textContent =
+        let autoText =
           `一场游历已结束（${outcome === 'win' ? '胜利' : outcome === 'lose' ? '受挫' : '平局'}），奖励已自动结算。`;
+        if (droppedSkill) {
+          autoText += ` 获得新功法：《${droppedSkill.name}》。`;
+        }
+        battleResultDiv.textContent = autoText;
         saveGame();
       }
 
@@ -1772,6 +2381,9 @@ button:disabled {
       }
 
       if (b.currentActor === 'player') {
+        if (!b.skillState) b.skillState = {};
+
+        // 回合开始：少量恢复
         if (eff.regenPerTurn > 0) {
           const oldHp = b.player.hp;
           b.player.hp = Math.min(b.player.maxHp, b.player.hp + eff.regenPerTurn);
@@ -1780,6 +2392,24 @@ button:disabled {
           }
         }
 
+        // 如果拥有「次元裂斩」，且尚未施展过，则在本回合优先使用一次
+        if (eff.burstDimSlash && !b.skillState.dimSlashUsed) {
+          b.skillState.dimSlashUsed = true;
+          const baseDmg = calcDamage(b.player.atk, b.enemy.physique, b.enemy.root);
+          const skillDmg = Math.floor(baseDmg * 20); // 约 2000% 伤害
+          b.enemy.hp = Math.max(0, b.enemy.hp - skillDmg);
+          appendBattleLog(
+            `回合 ${b.turn}：你施展「次元裂斩」，斩出维度裂痕，对「${b.enemy.name}」造成 ${skillDmg} 点毁灭性伤害！`
+          );
+          if (b.enemy.hp <= 0) {
+            appendBattleLog(`「${b.enemy.name}」在次元裂缝中崩解。`);
+          }
+          b.currentActor = 'enemy';
+          b.turn++;
+          return;
+        }
+
+        // 普通攻击流程
         const effectiveAtk = b.player.atk;
         let dmg = calcDamage(effectiveAtk, b.enemy.physique, b.enemy.root);
 
@@ -1797,6 +2427,17 @@ button:disabled {
           let text = `回合 ${b.turn}：你攻击「${b.enemy.name}」，造成 ${dmg} 点伤害（对方剩余 ${b.enemy.hp}）。`;
           if (crit) text += '【暴击】';
           appendBattleLog(text);
+
+          if (eff.lifeSteal > 0 && dmg > 0) {
+            const heal = Math.floor(dmg * eff.lifeSteal);
+            if (heal > 0) {
+              const oldHp = b.player.hp;
+              b.player.hp = Math.min(b.player.maxHp, b.player.hp + heal);
+              if (b.player.hp > oldHp) {
+                appendBattleLog(`你从伤势中汲取了 ${b.player.hp - oldHp} 点生命。`);
+              }
+            }
+          }
         }
 
         let changeTurn = true;
@@ -1869,7 +2510,8 @@ button:disabled {
         effects: eff,
         map,
         abilityBefore: abilityPoints,
-        expBefore: experience
+        expBefore: experience,
+        skillState: {}
       };
 
       battleLogDiv.innerHTML = '';
@@ -1901,9 +2543,10 @@ button:disabled {
     function gainQi(amount, source) {
       if (!gameStarted) return;
       const meta = getLingRootTierMeta();
+      const methodMult = getMethodQiMult();
       let finalAmount = amount;
       if (['auto','click','battle','event'].includes(source)) {
-        finalAmount *= meta.qiMult;
+        finalAmount *= meta.qiMult * methodMult;
       }
 
       const oldStage = realmStage;
