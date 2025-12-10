@@ -1,0 +1,2074 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>仙途放置 Demo</title>
+  <style>
+/* ====== 通用布局 & 背景 ====== */
+body {
+  font-family: "Microsoft YaHei", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  background: radial-gradient(circle at top, #1b2340, #05060a);
+  color: #f3f3f3;
+  display: flex;
+  justify-content: center;
+  padding: 24px 12px;
+}
+
+.app-container {
+  width: 100%;
+  max-width: 520px;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ====== 顶部标题栏 ====== */
+.top-bar {
+  text-align: center;
+  margin-bottom: 8px;
+}
+
+h1 {
+  margin-bottom: 4px;
+  letter-spacing: 2px;
+  font-size: 24px;
+}
+
+.subtitle {
+  font-size: 13px;
+  color: #b6c1ff;
+  margin-bottom: 4px;
+}
+
+.player-info {
+  font-size: 13px;
+  color: #d3d6ff;
+}
+
+/* ====== 主体区域 ====== */
+.main-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+}
+
+/* 状态面板 */
+.stats {
+  margin: 10px 0 10px;
+  text-align: center;
+  line-height: 1.6;
+  padding: 12px 18px;
+  border-radius: 12px;
+  background: rgba(15, 20, 40, 0.9);
+  box-shadow: 0 0 18px rgba(0, 0, 0, 0.45);
+  border: 1px solid rgba(120, 150, 255, 0.4);
+  width: 100%;
+}
+
+#realm {
+  font-weight: bold;
+  color: #ffd56b;
+}
+
+.stats-actions {
+  margin-top: 6px;
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+}
+
+/* 按钮样式 */
+button {
+  padding: 10px 16px;
+  margin: 6px 0;
+  border: none;
+  border-radius: 999px;
+  cursor: pointer;
+  font-size: 14px;
+  background: linear-gradient(120deg, #3a8bff, #7a5cff);
+  color: #fff;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.45);
+  transition: transform 0.08s ease, box-shadow 0.08s ease, opacity 0.2s ease;
+}
+
+button:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.6);
+}
+
+button:active:not(:disabled) {
+  transform: translateY(1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-main {
+  font-size: 18px;
+  padding: 12px 24px;
+  margin: 12px 0 10px;
+}
+
+.btn-small {
+  padding: 6px 10px;
+  font-size: 12px;
+  margin: 0;
+}
+
+/* 通用功能面板卡片 */
+.panel {
+  background: rgba(12, 16, 32, 0.95);
+  border-radius: 14px;
+  padding: 16px;
+  margin-top: 8px;
+  width: 100%;
+  box-shadow: 0 0 14px rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(90, 120, 220, 0.7);
+}
+
+.panel h2 {
+  margin-top: 0;
+  font-size: 18px;
+  color: #e9f0ff;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.panel h2::before {
+  content: "✦";
+  font-size: 14px;
+  color: #ffd56b;
+}
+
+.upgrade {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 6px 0;
+}
+
+.upgrade-info {
+  font-size: 13px;
+}
+
+.hint {
+  font-size: 12px;
+  color: #9aa0c6;
+  margin-top: 8px;
+  line-height: 1.5;
+}
+
+/* 六维表格 */
+.stats-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 13px;
+}
+
+.stat-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.stat-right {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.btn-plus {
+  padding: 2px 8px;
+  font-size: 11px;
+  margin: 0;
+  border-radius: 999px;
+  background: linear-gradient(120deg, #5ac8fa, #007aff);
+}
+
+/* 灵根说明表 */
+.ling-root-table {
+  font-size: 13px;
+  margin-top: 8px;
+}
+
+.ling-root-row {
+  display: flex;
+  justify-content: space-between;
+  margin: 2px 0;
+}
+
+/* 游历日志 */
+#battleLog {
+  margin-top: 8px;
+  max-height: 220px;
+  overflow-y: auto;
+  font-size: 12px;
+  line-height: 1.5;
+  background: rgba(5, 8, 20, 0.85);
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(120, 150, 255, 0.3);
+}
+
+/* 底部导航 */
+.bottom-nav {
+  margin-top: 16px;
+  padding: 8px 10px;
+  border-radius: 18px;
+  background: rgba(10, 12, 24, 0.95);
+  box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.6);
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+}
+
+.nav-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  font-size: 11px;
+  color: #9aa0c6;
+}
+
+.nav-item.active {
+  color: #ffd56b;
+}
+
+.nav-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #384173, #151728);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  margin-bottom: 4px;
+}
+
+/* 开局输入道号界面 */
+.start-screen {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.82);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+.start-card {
+  background: rgba(10, 12, 30, 0.98);
+  border-radius: 16px;
+  padding: 20px 18px;
+  width: 90%;
+  max-width: 360px;
+  box-shadow: 0 0 24px rgba(0, 0, 0, 0.8);
+  border: 1px solid rgba(120, 150, 255, 0.8);
+  text-align: center;
+}
+
+.start-card h2 {
+  margin-top: 0;
+  margin-bottom: 10px;
+  font-size: 20px;
+}
+
+.start-card p {
+  font-size: 13px;
+  color: #c0c6ff;
+  margin-bottom: 10px;
+}
+
+.start-card input {
+  width: 85%;
+  padding: 8px 12px;
+  border-radius: 999px;
+  border: none;
+  outline: none;
+  margin: 8px 0 14px;
+  font-size: 14px;
+}
+
+.start-card .tip {
+  font-size: 12px;
+  color: #8f94c9;
+  margin-bottom: 10px;
+}
+
+/* 游历结算 & 随机事件弹层 */
+.overlay-screen {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.78);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 110;
+}
+
+.result-card {
+  background: rgba(10, 12, 30, 0.98);
+  border-radius: 16px;
+  padding: 18px 16px;
+  width: 90%;
+  max-width: 360px;
+  box-shadow: 0 0 24px rgba(0, 0, 0, 0.8);
+  border: 1px solid rgba(200, 180, 120, 0.8);
+  text-align: left;
+}
+
+.result-card h2 {
+  margin: 0 0 8px;
+  font-size: 18px;
+}
+
+.result-summary {
+  font-size: 13px;
+  color: #f5f5f5;
+  margin-bottom: 8px;
+}
+
+.result-drops {
+  font-size: 13px;
+  color: #ffd56b;
+  margin-bottom: 8px;
+}
+
+.result-extra {
+  font-size: 12px;
+  color: #d6dcff;
+  margin-bottom: 8px;
+}
+
+.result-random {
+  font-size: 12px;
+  color: #c0c6ff;
+  margin-bottom: 10px;
+}
+
+/* 大屏幕（可选） */
+@media (min-width: 900px) {
+  .app-container {
+    max-width: 620px;
+  }
+}
+  </style>
+</head>
+<body>
+
+  <!-- 开局命名 -->
+  <div id="startScreen" class="start-screen">
+    <div class="start-card">
+      <h2>踏入修仙之路</h2>
+      <p>请为自己取一个道号：</p>
+      <input id="playerNameInput" type="text" placeholder="例如：无名散修 / 青山散人" />
+      <div class="tip">开始修炼后，将随机觉醒一组灵根（可能为稀有单灵根或双五行灵根）。</div>
+      <button id="startGameBtn">开始修炼</button>
+    </div>
+  </div>
+
+  <!-- 游历结算 / 随机事件 -->
+  <div id="battleResultOverlay" class="overlay-screen">
+    <div class="result-card">
+      <h2 id="resultTitle">游历结果</h2>
+      <div id="resultSummary" class="result-summary"></div>
+      <div id="resultDrops" class="result-drops"></div>
+      <div id="resultExtra" class="result-extra"></div>
+      <div id="randomEvent" class="result-random"></div>
+      <button id="closeResultBtn">返回</button>
+    </div>
+  </div>
+
+  <div class="app-container" id="appContainer">
+    <!-- 顶部 -->
+    <div class="top-bar">
+      <h1>仙途放置 · Demo</h1>
+      <div class="subtitle">从凡人开始，每秒吸收 0.1 点真气，踏上修仙之路</div>
+      <div class="player-info">
+        道号：<span id="playerName">未命名</span> · 灵根：<span id="lingRootName">未觉醒</span>
+      </div>
+    </div>
+
+    <!-- 主区域：多页面 -->
+    <div class="main-area">
+      <!-- 修炼页 -->
+      <div id="pageCultivation" style="width:100%;">
+        <div class="stats">
+          <div>当前真气：<span id="qi">0.0</span></div>
+          <div>每秒修为增长：<span id="qps">0.0</span> / 秒</div>
+          <div>每次打坐获得：<span id="qpc">1.0</span> 真气</div>
+          <div>当前境界：<span id="realm">凡人</span></div>
+          <div>
+            历练值：<span id="expMainSpan">0</span>
+            （突破需求：<span id="expReqSpan">—</span>）
+          </div>
+          <div class="hint">
+            境界：凡人 → 辟谷 → 炼体 → 练气 → 筑基 → 金丹 → 元婴 → 出窍 → 大乘 → 渡劫 → 化神 → 仙班。<br>
+            每个「大圆满」突破到下一大境界，需要足够的历练值并手动突破。
+          </div>
+          <div class="stats-actions">
+            <button id="breakthroughBtn" class="btn-small">突破境界</button>
+            <button id="saveBtn" class="btn-small">手动保存</button>
+            <button id="resetBtn" class="btn-small">清空重修</button>
+          </div>
+        </div>
+
+        <button id="cultivateBtn" class="btn-main">打坐吐纳（获得真气）</button>
+
+        <div class="panel">
+          <h2>修为与属性</h2>
+          <div class="hint">
+            每次获得真气，有一定概率获得「能力点」，可用于自由加点（概率较低，主要靠境界自动成长）。<br>
+            可分配能力点：<span id="abilityPoints">0</span>
+          </div>
+          <div class="hint">
+            历练值（游历经验）：<span id="experienceSpan">0</span>
+            （当前额外伤害加成：<span id="experienceBuffSpan">0</span>%）
+          </div>
+          <div class="hint">
+            当前灵石储量：<span id="spiritStonesSpan">0</span>
+          </div>
+          <div class="stats-grid">
+            <div class="stat-row">
+              <span>力量（攻击伤害）</span>
+              <span class="stat-right">
+                <span id="statPower">0</span>
+                <button class="btn-plus" data-stat="power">+</button>
+              </span>
+            </div>
+            <div class="stat-row">
+              <span>体质（生命、防御）</span>
+              <span class="stat-right">
+                <span id="statPhysique">0</span>
+                <button class="btn-plus" data-stat="physique">+</button>
+              </span>
+            </div>
+            <div class="stat-row">
+              <span>身法（闪避、速度）</span>
+              <span class="stat-right">
+                <span id="statAgility">0</span>
+                <button class="btn-plus" data-stat="agility">+</button>
+              </span>
+            </div>
+            <div class="stat-row">
+              <span>神识（蓝量、精神）</span>
+              <span class="stat-right">
+                <span id="statSpirit">0</span>
+                <button class="btn-plus" data-stat="spirit">+</button>
+              </span>
+            </div>
+            <div class="stat-row">
+              <span>根骨（体魄、韧性）</span>
+              <span class="stat-right">
+                <span id="statRoot">0</span>
+                <button class="btn-plus" data-stat="root">+</button>
+              </span>
+            </div>
+            <div class="stat-row">
+              <span>气运（机缘、掉落）</span>
+              <span class="stat-right">
+                <span id="statLuck">0</span>
+                <button class="btn-plus" data-stat="luck">+</button>
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <h2>灵根天赋</h2>
+          <div class="hint">
+            灵根不直接改变战斗数值，但会极大影响修炼速度、能力点掉落与奇遇触发。<br>
+            当前灵根系统加成：<span id="lingRootBonusText">修炼速度 +0% · 能力点 +0% · 奇遇权重 +0%</span>
+          </div>
+          <div id="lingRootTable" class="ling-root-table"></div>
+        </div>
+      </div>
+
+      <!-- 游历页 -->
+      <div id="pageBattle" style="width:100%; display:none;">
+        <div class="panel">
+          <h2>游历 · 试炼</h2>
+          <div id="playerBattleStats" class="hint">尚未踏入修行，属性未知。</div>
+          <div class="hint">
+            游历目的地：
+            <select id="mapSelect"></select>
+          </div>
+          <div class="hint">
+            不同地点敌人境界不同，获得的真气 / 历练 / 灵石奖励也不同。敌人越接近你当前境界，奖励越高。
+          </div>
+          <div class="hint">
+            <label>
+              <input type="checkbox" id="autoBattleToggle">
+              自动战斗结算（在修炼 / 市集界面时不弹出结算窗口）
+            </label>
+          </div>
+          <button id="startBattleBtn" class="btn-main">开始游历试炼</button>
+          <div id="battleResult" class="hint"></div>
+          <div id="battleLog"></div>
+        </div>
+      </div>
+
+      <!-- 市集页 -->
+      <div id="pageShop" style="width:100%; display:none;">
+        <div class="panel">
+          <h2>灵石市集 · 洞府</h2>
+          <div class="hint">
+            当前灵石：<span id="shopSpiritStones">0</span><br>
+            洞府会自动吸收天地灵气，是挂机修炼的核心。
+          </div>
+          <div class="upgrade">
+            <div class="upgrade-info">
+              购买洞府（数量叠加）<br>
+              价格：<span id="caveCost">0</span> 灵石<br>
+              洞府数量：<span id="caveCount">0</span>
+            </div>
+            <button id="buyCaveBtn">购买洞府</button>
+          </div>
+          <div class="upgrade">
+            <div class="upgrade-info">
+              洞府品质：<span id="caveQualitySpan">简陋洞府</span><br>
+              当前总洞府加成：<span id="caveQpsSpan">0.0</span> 真气/秒<br>
+              品质升级消耗：<span id="caveUpgradeCost">0</span> 灵石
+            </div>
+            <button id="upgradeCaveBtn">升级洞府品质</button>
+          </div>
+          <div class="hint">
+            品质越高，每一座洞府提供的真气/秒越多。部分游历奇遇也可能直接提升洞府品质。
+          </div>
+        </div>
+
+        <div class="panel">
+          <h2>灵石市集 · 丹药</h2>
+          <div class="hint">
+            丹药主要提升打坐时的真气收益，是前期提升修为速度的重要方式。
+          </div>
+          <div class="upgrade">
+            <div class="upgrade-info">
+              购买聚气散一层（提升打坐收益）<br>
+              价格：<span id="pillCost">0</span> 灵石<br>
+              丹药层数：<span id="pillLevel">1</span>
+            </div>
+            <button id="buyPillBtn">购买丹药</button>
+          </div>
+          <div class="upgrade">
+            <div class="upgrade-info">
+              丹药品质：<span id="pillQualitySpan">凡品聚气散</span><br>
+              品质升级消耗：<span id="pillUpgradeCost">0</span> 灵石
+            </div>
+            <button id="upgradePillBtn">升级丹药品质</button>
+          </div>
+          <div class="hint">
+            品质越高，每一层丹药提供的额外打坐真气越多。未来可以在此扩展更多丹药与功法。
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 底部导航 -->
+    <div class="bottom-nav">
+      <div class="nav-item active" data-page="cultivation">
+        <div class="nav-icon">⛰️</div>
+        <div class="nav-label">修炼</div>
+      </div>
+      <div class="nav-item" data-page="battle">
+        <div class="nav-icon">🧭</div>
+        <div class="nav-label">游历</div>
+      </div>
+      <div class="nav-item" data-page="shop">
+        <div class="nav-icon">🛒</div>
+        <div class="nav-label">市集</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    /* ========== 灵根设定 & 层级加成（只影响修炼 & 奇遇） ========== */
+
+    const LING_ROOTS = [
+      // T1
+      { id: 'cause',  name: '因果灵根',  short: '因', tierGroup: 'T1', type: 'special',
+        desc: '以因果为线，牵动结果。适合「天命改写」「结界判决」等高端功法路线。' },
+      { id: 'time',   name: '时间灵根',  short: '时', tierGroup: 'T1', type: 'special',
+        desc: '感知时间流速变化，未来可修习「时停」「回溯」等逆天术式。' },
+      { id: 'space',  name: '空间灵根',  short: '空', tierGroup: 'T1', type: 'special',
+        desc: '天生与空间有亲和，可掌握瞬移、折叠空间、领域压缩等能力。' },
+
+      // T2
+      { id: 'holy',   name: '圣灵根',    short: '圣', tierGroup: 'T2', type: 'special',
+        desc: '秩序与庇护的象征，偏治疗、护盾、团队增益等圣职路线。' },
+      { id: 'realm',  name: '界灵根',    short: '界', tierGroup: 'T2', type: 'special',
+        desc: '擅长构筑领域与结界，将来可镇守一方小世界。' },
+      { id: 'light',  name: '光灵根',    short: '光', tierGroup: 'T2', type: 'special',
+        desc: '掌控光与速度，偏净化、爆发与高速斩击。' },
+      { id: 'dark',   name: '暗灵根',    short: '暗', tierGroup: 'T2', type: 'special',
+        desc: '与阴影、腐蚀、潜行相伴，可修暗影潜伏、诅咒等武技。' },
+
+      // T3
+      { id: 'dream',  name: '梦灵根',    short: '梦', tierGroup: 'T3', type: 'special',
+        desc: '游走现实与梦境，适合幻术、心境扰乱、心魔化解方向。' },
+      { id: 'spirit', name: '灵灵根',    short: '灵', tierGroup: 'T3', type: 'special',
+        desc: '灵觉敏锐，对天地气机极为敏感，擅长探查危机与机缘。' },
+      { id: 'heart',  name: '心灵根',    short: '心', tierGroup: 'T3', type: 'special',
+        desc: '心性坚韧，情绪共鸣强烈，适合意志压制、斗志燃烧路线。' },
+
+      // T4
+      { id: 'ice',    name: '冰灵根',    short: '冰', tierGroup: 'T4', type: 'special',
+        desc: '主掌寒冰封锁与减速，战斗表现强势。' },
+      { id: 'thunder',name: '雷灵根',    short: '雷', tierGroup: 'T4', type: 'special',
+        desc: '雷霆万钧，偏强爆发与麻痹打断，是前期战斗利器。' },
+
+      // T5 五行，可组合为双灵根
+      { id: 'metal',  name: '金灵根',    short: '金', tierGroup: 'T5', type: 'basic',
+        desc: '锋锐攻伐之道，适合剑修、枪修等锋锐流派。' },
+      { id: 'wood',   name: '木灵根',    short: '木', tierGroup: 'T5', type: 'basic',
+        desc: '生长与治愈之本源，擅长回复与藤蔓缠绕。' },
+      { id: 'water',  name: '水灵根',    short: '水', tierGroup: 'T5', type: 'basic',
+        desc: '柔韧多变，可借水势卸力，偏身法与化解。' },
+      { id: 'fire',   name: '火灵根',    short: '火', tierGroup: 'T5', type: 'basic',
+        desc: '热烈爆裂，偏爆发输出与持续灼烧。' },
+      { id: 'earth',  name: '土灵根',    short: '土', tierGroup: 'T5', type: 'basic',
+        desc: '稳固厚重，适合防御、岩盾、护体等路线。' }
+    ];
+
+    const LING_TIER_META = {
+      none:       { label: '无灵根加成',         qiMult: 1.0,  abilityMult: 1.0, eventMult: 1.0 },
+      T1:         { label: 'T1 超限灵根',       qiMult: 3.0,  abilityMult: 2.5, eventMult: 2.5 },
+      T2:         { label: 'T2 高维规则灵根',   qiMult: 2.2,  abilityMult: 1.4, eventMult: 1.6 },
+      T3:         { label: 'T3 灵性/意识灵根',  qiMult: 2.0,  abilityMult: 1.0, eventMult: 1.4 },
+      T4:         { label: 'T4 自然战斗灵根',   qiMult: 1.4,  abilityMult: 1.0, eventMult: 1.0 },
+      T5_single:  { label: 'T5 单五行灵根',     qiMult: 1.0,  abilityMult: 1.0, eventMult: 1.0 },
+      T5_double:  { label: 'T5 双五行灵根',     qiMult: 1.25, abilityMult: 1.0, eventMult: 1.0 }
+    };
+
+    function getBasicRoots()  { return LING_ROOTS.filter(r => r.type === 'basic'); }
+    function getSpecialRoots(){ return LING_ROOTS.filter(r => r.type === 'special'); }
+
+    function getDualBasicRelation(roots) {
+      if (!roots || roots.length !== 2) return { type: 'neutral', label: 'T5 双灵根', descExtra: '' };
+      const [r1, r2] = roots;
+      if (r1.type !== 'basic' || r2.type !== 'basic') return { type: 'neutral', label: 'T5 双灵根', descExtra: '' };
+      const a = r1.id, b = r2.id;
+
+      function match(p1, p2) {
+        return (a === p1 && b === p2) || (a === p2 && b === p1);
+      }
+
+      // 相生：木火、火土、土金、金水、水木
+      if (match('wood', 'fire') || match('fire', 'earth') || match('earth', 'metal')
+        || match('metal', 'water') || match('water', 'wood')) {
+        return {
+          type: 'synergy',
+          label: 'T4.5 相生双灵根',
+          descExtra: '两种五行相生，火涨木势，木祝火威，使得能力点获取略有提升。'
+        };
+      }
+      // 相克：金木，木土，土水，水火，火金
+      if (match('metal', 'wood') || match('wood', 'earth') || match('earth', 'water')
+        || match('water', 'fire') || match('fire', 'metal')) {
+        return {
+          type: 'clash',
+          label: 'T5 相克双灵根',
+          descExtra: '两种五行相克，修行路上波澜不断，却更容易激发命运波动与奇遇。'
+        };
+      }
+      return { type: 'neutral', label: 'T5 双灵根', descExtra: '两种五行并存，既有多样变化，也需谨慎调和。' };
+    }
+
+    function getLingRootTierMeta() {
+      if (!lingRoots || lingRoots.length === 0) return LING_TIER_META.none;
+
+      const hasSpecial = lingRoots.some(r => r.type === 'special');
+      if (hasSpecial) {
+        const order = ['T1', 'T2', 'T3', 'T4'];
+        let bestTier = 'T4';
+        let bestIndex = order.length;
+        lingRoots.forEach(r => {
+          if (r.type === 'special') {
+            const idx = order.indexOf(r.tierGroup);
+            if (idx !== -1 && idx < bestIndex) {
+              bestIndex = idx;
+              bestTier = r.tierGroup;
+            }
+          }
+        });
+        const meta = { ...LING_TIER_META[bestTier] };
+        return meta;
+      } else {
+        if (lingRoots.length >= 2) {
+          const meta = { ...LING_TIER_META.T5_double };
+          const rel = getDualBasicRelation(lingRoots);
+          if (rel.type === 'synergy') {
+            meta.abilityMult *= 1.2; // 相生：能力点略增
+          } else if (rel.type === 'clash') {
+            meta.eventMult *= 1.2;   // 相克：奇遇概率略增
+          }
+          return meta;
+        }
+        return LING_TIER_META.T5_single;
+      }
+    }
+
+    function getLingRootDisplayName() {
+      if (!lingRoots || lingRoots.length === 0) return '未觉醒';
+      if (lingRoots.length === 1) return lingRoots[0].name;
+      const bothBasic = lingRoots.every(r => r.type === 'basic');
+      if (bothBasic) {
+        return `${lingRoots[0].short}${lingRoots[1].short}双灵根`;
+      }
+      return lingRoots.map(r => r.name).join(' / ');
+    }
+
+    // 抽灵根：15% 稀有单灵根；其余为单/双五行
+    function generateLingRoots() {
+      const specialPool = getSpecialRoots();
+      const basicPool = getBasicRoots();
+      const roll = Math.random();
+
+      if (roll < 0.15) {
+        const idx = Math.floor(Math.random() * specialPool.length);
+        return [specialPool[idx]];
+      } else {
+        const r2 = Math.random();
+        if (r2 < 0.4) {
+          const idx = Math.floor(Math.random() * basicPool.length);
+          return [basicPool[idx]];
+        } else {
+          const idx1 = Math.floor(Math.random() * basicPool.length);
+          let idx2 = Math.floor(Math.random() * basicPool.length);
+          while (idx2 === idx1) idx2 = Math.floor(Math.random() * basicPool.length);
+          return [basicPool[idx1], basicPool[idx2]];
+        }
+      }
+    }
+
+    /* ========== 境界定义：凡人 + 11 个大境界，每个前中后大圆满 ========= */
+
+    const BIG_REALMS = ['凡人','辟谷','炼体','练气','筑基','金丹','元婴','出窍','大乘','渡劫','化神','仙班'];
+    const REALM_SUFFIXES = ['前期','中期','后期','大圆满'];
+    const REALM_NAMES = [];
+    const realmThresholds = [];
+
+    REALM_NAMES[0] = '凡人';
+    realmThresholds[0] = 0;
+
+    for (let i = 1; i < BIG_REALMS.length; i++) {
+      const base = Math.pow(10, i - 1) * 10; // 10,100,1000,10000,...
+      const factors = [1, 2.5, 5, 9];        // 10/25/50/90, 100/250/500/900, ...
+      for (let j = 0; j < 4; j++) {
+        const stageIndex = (i - 1) * 4 + j + 1; // 1..4: 辟谷, 5..8: 炼体, ...
+        REALM_NAMES[stageIndex] = BIG_REALMS[i] + REALM_SUFFIXES[j];
+        realmThresholds[stageIndex] = Math.floor(base * factors[j]);
+      }
+    }
+
+    function getRealmNameFromStage(stage) {
+      return REALM_NAMES[stage] || '未知境界';
+    }
+
+    function getBigRealmIndex(stage) {
+      if (stage <= 0) return -1;
+      return Math.floor((stage - 1) / 4); // 0:辟谷,1:炼体,...,10:仙班
+    }
+
+    function isBigRoundStage(stage) {
+      return stage > 0 && stage % 4 === 0;
+    }
+
+    // 11 个大境界的大圆满加成（数值可继续调）
+    const REALM_BIG_BONUSES = [
+      { power: 1,  physique: 2,  agility: 1,  spirit: 1,  root: 2,  luck: 0 }, // 辟谷
+      { power: 2,  physique: 3,  agility: 2,  spirit: 1,  root: 2,  luck: 1 }, // 炼体
+      { power: 3,  physique: 3,  agility: 2,  spirit: 2,  root: 2,  luck: 1 }, // 练气
+      { power: 4,  physique: 4,  agility: 3,  spirit: 3,  root: 3,  luck: 1 }, // 筑基
+      { power: 5,  physique: 5,  agility: 3,  spirit: 4,  root: 3,  luck: 2 }, // 金丹
+      { power: 6,  physique: 6,  agility: 4,  spirit: 5,  root: 4,  luck: 2 }, // 元婴
+      { power: 7,  physique: 7,  agility: 4,  spirit: 6,  root: 4,  luck: 3 }, // 出窍
+      { power: 8,  physique: 8,  agility: 5,  spirit: 7,  root: 5,  luck: 3 }, // 大乘
+      { power: 9,  physique: 9,  agility: 5,  spirit: 8,  root: 5,  luck: 4 }, // 渡劫
+      { power: 10, physique:10, agility: 6,  spirit: 9,  root: 6,  luck: 4 }, // 化神
+      { power: 12, physique:12, agility: 7,  spirit:10,  root: 7,  luck: 5 }  // 仙班
+    ];
+
+    const REALM_BIG_QI_BONUS = [
+      0.02, 0.04, 0.06, 0.09, 0.12, 0.16, 0.20, 0.25, 0.30, 0.40, 0.50
+    ];
+
+    // 每个大境大圆满突破到下一大境界所需历练值：50、500、5000、50000……
+    function getExpThresholdForBigRealmIndex(idx) {
+      if (idx < 0) return 0;
+      return 50 * Math.pow(10, idx); // 50,500,5000,50000,...
+    }
+
+    function getCurrentExpRequirementForBreak(stage, experience) {
+      if (!isBigRoundStage(stage)) return 0;
+      const idx = getBigRealmIndex(stage);
+      return getExpThresholdForBigRealmIndex(idx);
+    }
+
+    /* ========== 随机 flavor 句子 ========= */
+    const RANDOM_EVENTS = [
+      '你在归途中偶然感应到远处有灵脉波动，但修为尚浅，只得记在心里。',
+      '一只灵兽从身旁掠过，似乎对你的灵根多看了一眼，随即消失在林间。',
+      '天空炸响一声闷雷，你隐约感到体内真气随之震动。',
+      '你路过一座废弃石亭，石碑上的古字在余光中似乎闪烁了一瞬。',
+      '远处有修士飞剑而过，溅起的灵光在你眼中留下短暂残影。',
+      '一阵微风拂过，你恍惚间听见有人在耳边低声念诵古经。'
+    ];
+    function getRandomEventText() {
+      const idx = Math.floor(Math.random() * RANDOM_EVENTS.length);
+      return RANDOM_EVENTS[idx];
+    }
+
+    /* ========== 核心状态 ========== */
+
+    let gameStarted = false;
+    let currentPage = 'cultivation';
+    let autoBattle = false;
+
+    let qi = 0;
+    let qiPerSecond = 0.1;   // 由基础 + 洞府 + 境界加成组合
+    let qiPerClick = 1.0;    // 由基础 + 丹药组合
+    let realmStage = 0;
+
+    const baseStats = {
+      power: 5, physique: 5, agility: 5,
+      spirit: 5, root: 5,    luck: 5
+    };
+    let stats = { ...baseStats };
+
+    let abilityPoints = 0;
+    let spiritStones = 0;
+    let experience = 0;
+
+    // 洞府 & 丹药品质 / 数量
+    let caveCount = 0;
+    let caveQuality = 1;
+    let pillLevel = 1;
+    let pillQuality = 1;
+
+    // 修炼基础：被品质和境界修正
+    let baseQiPerSecond = 0.1;
+    let realmQpsBonus = 0;
+    const caveQiPerBase = 0.2;
+    let baseQiPerClick = 1.0;
+
+    // 玩家 & 灵根
+    let playerName = '';
+    let lingRoots = [];
+
+    // 神·/仙号
+    let godTitleUnlocked = false;
+    let immortalTitle = '';
+    let immortalTitleUnlocked = false;
+
+    // 游历（战斗）状态
+    let currentBattle = null;
+    let battleTimerId = null;
+    const BATTLE_TURN_DELAY = 300;
+    const MAX_TURNS = 20;
+    let currentMapId = 'map_0';
+
+    /* ========== 市集品质文本与价格 ========== */
+
+    const CAVE_QUALITY_NAMES = ['简陋洞府', '普通洞府', '上品洞府', '极品洞府', '仙品洞府'];
+    const PILL_QUALITY_NAMES = ['凡品聚气散', '普通聚气散', '上品聚气散', '极品聚气散', '仙品聚气散'];
+    const MAX_CAVE_QUALITY = 5;
+    const MAX_PILL_QUALITY = 5;
+
+    const caveBaseStoneCost = 5;
+    const pillBaseStoneCost = 4;
+    const caveUpgradeBaseCost = 20;
+    const pillUpgradeBaseCost = 15;
+
+    function getCaveQualityName() {
+      const idx = Math.min(caveQuality - 1, CAVE_QUALITY_NAMES.length - 1);
+      return CAVE_QUALITY_NAMES[idx];
+    }
+    function getPillQualityName() {
+      const idx = Math.min(pillQuality - 1, PILL_QUALITY_NAMES.length - 1);
+      return PILL_QUALITY_NAMES[idx];
+    }
+
+    function getCaveBuyCost() {
+      return Math.floor(caveBaseStoneCost * Math.pow(1.5, caveCount));
+    }
+    function getCaveUpgradeCost() {
+      return Math.floor(caveUpgradeBaseCost * Math.pow(2, caveQuality - 1));
+    }
+    function getPillBuyCost() {
+      return Math.floor(pillBaseStoneCost * Math.pow(1.4, pillLevel - 1));
+    }
+    function getPillUpgradeCost() {
+      return Math.floor(pillUpgradeBaseCost * Math.pow(2, pillQuality - 1));
+    }
+
+    function getCaveQps() {
+      return caveCount * caveQiPerBase * (1 + 0.4 * (caveQuality - 1));
+    }
+
+    function recalcDerivedStats() {
+      qiPerSecond =
+        baseQiPerSecond +
+        realmQpsBonus +
+        getCaveQps();
+      qiPerClick =
+        baseQiPerClick +
+        (pillLevel - 1) * (1 + 0.4 * (pillQuality - 1));
+    }
+
+    /* ========== 地图（为每个境界生成一个游历目的地） ========== */
+
+    let MAPS = [];
+
+    function generateMaps() {
+      MAPS = [];
+      for (let s = 0; s < REALM_NAMES.length; s++) {
+        const stageName = REALM_NAMES[s];
+        let rewardMult = 0.6 + s * 0.12;
+        if (rewardMult > 6) rewardMult = 6;
+        MAPS.push({
+          id: 'map_' + s,
+          name: `${stageName} · 游历之地`,
+          enemyStage: s,
+          rewardMult
+        });
+      }
+    }
+
+    /* ========== DOM 引用 ========== */
+
+    const qiSpan = document.getElementById('qi');
+    const qpsSpan = document.getElementById('qps');
+    const qpcSpan = document.getElementById('qpc');
+    const realmSpan = document.getElementById('realm');
+
+    const expMainSpan = document.getElementById('expMainSpan');
+    const expReqSpan = document.getElementById('expReqSpan');
+    const breakthroughBtn = document.getElementById('breakthroughBtn');
+
+    const statPowerSpan = document.getElementById('statPower');
+    const statPhysiqueSpan = document.getElementById('statPhysique');
+    const statAgilitySpan = document.getElementById('statAgility');
+    const statSpiritSpan = document.getElementById('statSpirit');
+    const statRootSpan = document.getElementById('statRoot');
+    const statLuckSpan = document.getElementById('statLuck');
+
+    const abilityPointsSpan = document.getElementById('abilityPoints');
+    const spiritStonesSpan = document.getElementById('spiritStonesSpan');
+    const experienceSpan = document.getElementById('experienceSpan');
+    const experienceBuffSpan = document.getElementById('experienceBuffSpan');
+
+    const shopSpiritStonesSpan = document.getElementById('shopSpiritStones');
+
+    const cultivateBtn = document.getElementById('cultivateBtn');
+    const saveBtn = document.getElementById('saveBtn');
+    const resetBtn = document.getElementById('resetBtn');
+    const plusButtons = document.querySelectorAll('.btn-plus');
+
+    const startScreen = document.getElementById('startScreen');
+    const playerNameInput = document.getElementById('playerNameInput');
+    const startGameBtn = document.getElementById('startGameBtn');
+    const playerNameSpan = document.getElementById('playerName');
+    const lingRootNameSpan = document.getElementById('lingRootName');
+    const lingRootTableDiv = document.getElementById('lingRootTable');
+    const lingRootBonusText = document.getElementById('lingRootBonusText');
+
+    const pageCultivation = document.getElementById('pageCultivation');
+    const pageBattle = document.getElementById('pageBattle');
+    const pageShop = document.getElementById('pageShop');
+    const navItems = document.querySelectorAll('.nav-item');
+
+    // 市集相关
+    const caveCostSpan = document.getElementById('caveCost');
+    const caveCountSpan = document.getElementById('caveCount');
+    const caveQualitySpan = document.getElementById('caveQualitySpan');
+    const caveUpgradeCostSpan = document.getElementById('caveUpgradeCost');
+    const caveQpsSpan = document.getElementById('caveQpsSpan');
+
+    const pillCostSpan = document.getElementById('pillCost');
+    const pillLevelSpan = document.getElementById('pillLevel');
+    const pillQualitySpan = document.getElementById('pillQualitySpan');
+    const pillUpgradeCostSpan = document.getElementById('pillUpgradeCost');
+
+    const buyCaveBtn = document.getElementById('buyCaveBtn');
+    const upgradeCaveBtn = document.getElementById('upgradeCaveBtn');
+    const buyPillBtn = document.getElementById('buyPillBtn');
+    const upgradePillBtn = document.getElementById('upgradePillBtn');
+
+    // 游历
+    const playerBattleStatsDiv = document.getElementById('playerBattleStats');
+    const mapSelect = document.getElementById('mapSelect');
+    const startBattleBtn = document.getElementById('startBattleBtn');
+    const battleResultDiv = document.getElementById('battleResult');
+    const battleLogDiv = document.getElementById('battleLog');
+    const autoBattleToggle = document.getElementById('autoBattleToggle');
+
+    const battleResultOverlay = document.getElementById('battleResultOverlay');
+    const resultTitle = document.getElementById('resultTitle');
+    const resultSummary = document.getElementById('resultSummary');
+    const resultDrops = document.getElementById('resultDrops');
+    const resultExtra = document.getElementById('resultExtra');
+    const randomEventDiv = document.getElementById('randomEvent');
+    const closeResultBtn = document.getElementById('closeResultBtn');
+
+    const SAVE_KEY = 'xiuxianIdleSave_v7';
+
+    /* ========== 灵根 UI ========== */
+
+    function updateLingRootUI() {
+      lingRootNameSpan.textContent = getLingRootDisplayName();
+
+      const meta = getLingRootTierMeta();
+      const qiBonus      = ((meta.qiMult - 1) * 100).toFixed(0);
+      const abilityBonus = ((meta.abilityMult - 1) * 100).toFixed(0);
+      const eventBonus   = ((meta.eventMult - 1) * 100).toFixed(0);
+
+      function fmt(v) {
+        const n = Number(v);
+        if (n === 0) return '+0%';
+        return (n > 0 ? '+' : '') + n + '%';
+      }
+      lingRootBonusText.textContent =
+        `修炼速度 ${fmt(qiBonus)} · 能力点 ${fmt(abilityBonus)} · 奇遇权重 ${fmt(eventBonus)}`;
+
+      lingRootTableDiv.innerHTML = '';
+      if (!lingRoots || lingRoots.length === 0) {
+        lingRootTableDiv.textContent = '尚未觉醒灵根。';
+        return;
+      }
+
+      // 双五行灵根：合并展示
+      if (lingRoots.length === 2 && lingRoots.every(r => r.type === 'basic')) {
+        const [r1, r2] = lingRoots;
+        const rel = getDualBasicRelation(lingRoots);
+
+        const row1 = document.createElement('div');
+        row1.className = 'ling-root-row';
+        row1.innerHTML = `<span>${r1.short}${r2.short}双灵根</span><span>层级：${rel.label}</span>`;
+        lingRootTableDiv.appendChild(row1);
+
+        const row2 = document.createElement('div');
+        row2.className = 'ling-root-row';
+        row2.innerHTML =
+          `<span>能力倾向：</span><span>${r1.name} 与 ${r2.name} 并存。${rel.descExtra}</span>`;
+        lingRootTableDiv.appendChild(row2);
+      } else {
+        // 单灵根 / 稀有灵根：逐个展示
+        lingRoots.forEach(r => {
+          const row1 = document.createElement('div');
+          row1.className = 'ling-root-row';
+          row1.innerHTML = `<span>${r.name}</span><span>层级：${r.tierGroup} · 类型：${r.type === 'special' ? '稀有' : '五行'}</span>`;
+          lingRootTableDiv.appendChild(row1);
+
+          const row2 = document.createElement('div');
+          row2.className = 'ling-root-row';
+          row2.innerHTML = `<span>能力倾向：</span><span>${r.desc}</span>`;
+          lingRootTableDiv.appendChild(row2);
+        });
+      }
+
+      const extra = document.createElement('div');
+      extra.className = 'ling-root-row';
+      extra.innerHTML = `<span>系统加成：</span><span>${getLingRootTierMeta().label}</span>`;
+      lingRootTableDiv.appendChild(extra);
+    }
+
+    /* ========== 境界加成：每阶段/每大境界加成 ========= */
+
+    function applyStageBonus(stage) {
+      if (stage <= 0) return;
+      const bigIdx = getBigRealmIndex(stage);
+      const incBase = 1 + Math.floor(bigIdx / 2); // 后期境界每升一级加得更多
+
+      stats.power    += incBase;
+      stats.physique += incBase + 1;
+      stats.agility  += incBase;
+      stats.spirit   += incBase;
+      stats.root     += incBase + 1;
+      stats.luck     += Math.max(1, Math.floor(incBase / 2));
+
+      // 化神称号 / 仙班仙号：在进入对应大境界「前期」时触发
+      if (stage % 4 === 1) {
+        if (bigIdx === 9 && !godTitleUnlocked) {
+          godTitleUnlocked = true;
+          alert('你已踏入「化神」境界，获得称号：神·（显示在道号前）。');
+        }
+        if (bigIdx === 10 && !immortalTitleUnlocked) {
+          immortalTitleUnlocked = true;
+          const name = prompt('恭喜你成功晋级「仙班」！请为自己取一个仙号（将显示在道号前）：',
+                              '某某上仙');
+          if (name && name.trim()) {
+            immortalTitle = name.trim();
+          }
+        }
+      }
+    }
+
+    function applyRealmBonus(stage) {
+      if (stage <= 0) return;
+      const idx = getBigRealmIndex(stage);
+      if (idx < 0 || idx >= REALM_BIG_BONUSES.length) return;
+      const bonus = REALM_BIG_BONUSES[idx];
+      stats.power    += bonus.power;
+      stats.physique += bonus.physique;
+      stats.agility  += bonus.agility;
+      stats.spirit   += bonus.spirit;
+      stats.root     += bonus.root;
+      stats.luck     += bonus.luck;
+      realmQpsBonus  += REALM_BIG_QI_BONUS[idx] || 0;
+      recalcDerivedStats();
+    }
+
+    /* ========== 自动突破 & 手动突破 ========= */
+
+    function checkBreakthrough() {
+      let upgraded = false;
+      while (realmStage < realmThresholds.length - 1) {
+        const nextStage = realmStage + 1;
+        if (qi < realmThresholds[nextStage]) break;
+        if (isBigRoundStage(realmStage)) break; // 大圆满需要手动突破
+        realmStage = nextStage;
+        applyStageBonus(realmStage);
+        if (isBigRoundStage(realmStage)) {
+          applyRealmBonus(realmStage);
+        }
+        upgraded = true;
+      }
+      if (upgraded) {
+        recalcDerivedStats();
+      }
+    }
+
+    function canManualBreakthrough() {
+      if (!gameStarted) return false;
+      if (!isBigRoundStage(realmStage)) return false;
+      if (realmStage >= realmThresholds.length - 1) return false;
+
+      const expReq = getCurrentExpRequirementForBreak(realmStage, experience);
+      if (experience < expReq) return false;
+
+      const nextStage = realmStage + 1;
+      if (qi < realmThresholds[nextStage]) return false;
+
+      return true;
+    }
+
+    function doManualBreakthrough() {
+      if (!canManualBreakthrough()) return;
+
+      // 从筑基大圆满开始，有失败几率：筑基→金丹 1%，金丹→元婴 2%，以此类推
+      const bigIdxCurrent = getBigRealmIndex(realmStage); // 辟谷=0, 炼体=1,...,仙班=10
+      if (bigIdxCurrent >= 3) {
+        const failChance = (bigIdxCurrent - 2) / 100; // 3→1%，4→2%，...
+        if (Math.random() < failChance) {
+          const lost = Math.floor(qi * 0.1);
+          qi = Math.max(0, qi - lost);
+          alert(`突破失败！真气震荡，损失 ${lost} 点真气。可调整心境后再尝试。`);
+          updateUI();
+          return;
+        }
+      }
+
+      const oldName = getRealmNameFromStage(realmStage);
+      const targetStage = realmStage + 1;
+
+      realmStage = targetStage;
+      applyStageBonus(realmStage);
+      if (isBigRoundStage(realmStage)) {
+        applyRealmBonus(realmStage);
+      }
+      // 真气足够的话，继续自动跨小阶段
+      checkBreakthrough();
+      recalcDerivedStats();
+      const newName = getRealmNameFromStage(realmStage);
+      updateUI();
+      alert(`你从「${oldName}」突破到了「${newName}」！`);
+    }
+
+    /* ========== 能力点掉落（变难 + 受灵根 & 气运影响） ========== */
+
+    function rollAbilityPoint(source) {
+      // 比之前难度高：自动 0.4%，点击 1.8% 基础
+      const base = (source === 'auto') ? 0.004 : 0.018;
+      const meta = getLingRootTierMeta();
+      const lingMult = meta.abilityMult;
+      const luckDiff = stats.luck - baseStats.luck;
+      const luckMult = 1 + luckDiff * 0.03;
+      let chance = base * lingMult * luckMult;
+      if (chance > 0.8) chance = 0.8;
+      if (Math.random() < chance) {
+        abilityPoints++;
+      }
+    }
+
+    /* ========== 游历属性（历练给微弱增伤） ========== */
+
+    function getPlayerBattleStats() {
+      // 每点历练 +0.2% 伤害，上限 +50%
+      const expBuff = 1 + Math.min(experience * 0.002, 0.5);
+      const maxHp = 90 + stats.physique * 9 + stats.root * 6;
+      const mpMax = 50 + stats.spirit * 5;
+      const atk = (10 + stats.power * 2) * expBuff;
+      let dodge = 0.05 + stats.agility * 0.006;
+      if (dodge > 0.45) dodge = 0.45;
+      const spd = 100 + stats.agility * 2;
+
+      return {
+        maxHp: Math.floor(maxHp),
+        hp: Math.floor(maxHp),
+        mpMax: Math.floor(mpMax),
+        mp: Math.floor(mpMax),
+        atk: Math.floor(atk),
+        dodge,
+        spd,
+        phys: stats.physique,
+        root: stats.root
+      };
+    }
+
+    function updateBattleStatsUI() {
+      if (!playerBattleStatsDiv) return;
+      if (!gameStarted) {
+        playerBattleStatsDiv.textContent = '尚未踏入修行，属性未知。';
+        return;
+      }
+      const base = getPlayerBattleStats();
+      playerBattleStatsDiv.textContent =
+        `你的属性：生命 ${base.maxHp} · 攻击 ${base.atk} · 蓝量 ${base.mpMax} · ` +
+        `闪避 ${(base.dodge * 100).toFixed(1)}% · 速度 ${base.spd}`;
+    }
+
+    // 灵根暂不影响战斗数值（预留）
+    function getLingRootBattleEffects() {
+      return {
+        atkMul: 1,
+        hpMul: 1,
+        speedMul: 1,
+        dodgeBonus: 0,
+        damageTakenMul: 1,
+        enemySpeedMul: 1,
+        lifeSteal: 0,
+        regenPerTurn: 0,
+        critChance: 0,
+        critMul: 1.5,
+        extraTurnChance: 0,
+        sleepChance: 0,
+        heartRage: false
+      };
+    }
+
+    /* ========== 伤害公式（略提高伤害，缩短游历战斗） ========== */
+
+    function calcDamage(attackerAtk, defenderPhysique, defenderRoot) {
+      const defScore = defenderPhysique * 0.6 + defenderRoot * 0.4;
+      let mitigate = 1 / (1 + defScore * 0.018);
+      if (mitigate < 0.35) mitigate = 0.35;
+      if (mitigate > 1) mitigate = 1;
+      const variance = 0.9 + Math.random() * 0.2;
+      const raw = attackerAtk * variance;
+      return Math.max(1, Math.floor(raw * mitigate));
+    }
+
+    /* ========== 地图相关 ========= */
+
+    function initMaps() {
+      mapSelect.innerHTML = '';
+      MAPS.forEach(m => {
+        const opt = document.createElement('option');
+        opt.value = m.id;
+        opt.textContent = m.name;
+        mapSelect.appendChild(opt);
+      });
+      mapSelect.value = currentMapId;
+    }
+
+    function getCurrentMap() {
+      return MAPS.find(m => m.id === currentMapId) || MAPS[0];
+    }
+
+    /* ========== 敌人生成 ========= */
+
+    function generateRandomEnemy(targetStage) {
+      const enemyStage = (typeof targetStage === 'number') ? targetStage : realmStage;
+      const stageDiff = enemyStage - realmStage;
+      const stageFactor = Math.max(0.4, 1 + stageDiff * 0.3);
+
+      const basePower = Math.max(1, stats.power * stageFactor);
+      const basePhys  = Math.max(1, stats.physique * stageFactor);
+      const baseRoot  = Math.max(1, stats.root * stageFactor);
+      const baseAgi   = Math.max(1, stats.agility * stageFactor);
+
+      function randAround(v) {
+        const factor = 1 + (Math.random() * 2 - 1) * 0.25;
+        return Math.max(1, Math.round(v * factor));
+      }
+
+      const ePower = randAround(basePower);
+      const ePhys  = randAround(basePhys);
+      const eRoot  = randAround(baseRoot);
+      const eAgi   = randAround(baseAgi);
+
+      const maxHp = 80 + ePhys * 9 + eRoot * 6;
+      const atk   = 9 + ePower * 2;
+      let dodge   = 0.04 + eAgi * 0.005;
+      if (dodge > 0.35) dodge = 0.35;
+      const spd   = 100 + eAgi * 2;
+
+      const realmName = getRealmNameFromStage(enemyStage);
+      const namePool = ['游荡修士', '试炼幻影', '流浪散修', '同门剑修', '古阵残影'];
+      const n = namePool[Math.floor(Math.random() * namePool.length)];
+
+      return {
+        name: `${realmName}·${n}`,
+        maxHp: Math.floor(maxHp),
+        hp: Math.floor(maxHp),
+        atk: Math.floor(atk),
+        dodge,
+        spd,
+        physique: ePhys,
+        root: eRoot
+      };
+    }
+
+    /* ========== 存档系统 ========== */
+
+    function saveGame() {
+      const data = {
+        qi,
+        baseQiPerSecond,
+        baseQiPerClick,
+        realmQpsBonus,
+        caveCount,
+        caveQuality,
+        pillLevel,
+        pillQuality,
+        realmStage,
+        stats,
+        abilityPoints,
+        spiritStones,
+        experience,
+        playerName,
+        lingRootIds: lingRoots.map(r => r.id),
+        currentMapId,
+        autoBattle,
+        godTitleUnlocked,
+        immortalTitle,
+        immortalTitleUnlocked
+      };
+      try {
+        localStorage.setItem(SAVE_KEY, JSON.stringify(data));
+      } catch (e) {
+        console.error('存档失败：', e);
+      }
+    }
+
+    function loadGame() {
+      const raw = localStorage.getItem(SAVE_KEY);
+      if (!raw) return;
+      try {
+        const data = JSON.parse(raw);
+        if (typeof data.qi === 'number') qi = data.qi;
+        baseQiPerSecond =
+          typeof data.baseQiPerSecond === 'number' ? data.baseQiPerSecond : 0.1;
+        baseQiPerClick =
+          typeof data.baseQiPerClick === 'number' ? data.baseQiPerClick : 1.0;
+        realmQpsBonus =
+          typeof data.realmQpsBonus === 'number' ? data.realmQpsBonus : 0;
+
+        caveCount =
+          typeof data.caveCount === 'number' ? data.caveCount : 0;
+        caveQuality =
+          typeof data.caveQuality === 'number' ? data.caveQuality : 1;
+        pillLevel =
+          typeof data.pillLevel === 'number' ? data.pillLevel : 1;
+        pillQuality =
+          typeof data.pillQuality === 'number' ? data.pillQuality : 1;
+
+        realmStage = (typeof data.realmStage === 'number') ? data.realmStage : 0;
+
+        if (data.stats && typeof data.stats.power === 'number') {
+          stats = { ...baseStats, ...data.stats };
+        } else {
+          stats = { ...baseStats };
+        }
+
+        abilityPoints = (typeof data.abilityPoints === 'number') ? data.abilityPoints : 0;
+        spiritStones  = (typeof data.spiritStones === 'number') ? data.spiritStones : 0;
+        experience    = (typeof data.experience === 'number') ? data.experience : 0;
+
+        if (typeof data.playerName === 'string') playerName = data.playerName;
+
+        if (Array.isArray(data.lingRootIds)) {
+          lingRoots = data.lingRootIds
+            .map(id => LING_ROOTS.find(r => r.id === id))
+            .filter(Boolean);
+        } else {
+          lingRoots = [];
+        }
+
+        if (typeof data.currentMapId === 'string') {
+          currentMapId = data.currentMapId;
+        }
+
+        autoBattle = !!data.autoBattle;
+        godTitleUnlocked = !!data.godTitleUnlocked;
+        immortalTitle = typeof data.immortalTitle === 'string' ? data.immortalTitle : '';
+        immortalTitleUnlocked = !!data.immortalTitleUnlocked;
+      } catch (e) {
+        console.error('读取存档失败：', e);
+      }
+      recalcDerivedStats();
+    }
+
+    function resetGame() {
+      qi = 0;
+      baseQiPerSecond = 0.1;
+      baseQiPerClick = 1.0;
+      realmQpsBonus = 0;
+      recalcDerivedStats();
+
+      caveCount = 0;
+      caveQuality = 1;
+      pillLevel = 1;
+      pillQuality = 1;
+      realmStage = 0;
+      stats = { ...baseStats };
+      abilityPoints = 0;
+      spiritStones = 0;
+      experience = 0;
+      playerName = '';
+      lingRoots = [];
+      currentBattle = null;
+      currentMapId = 'map_0';
+      gameStarted = false;
+      autoBattle = false;
+      godTitleUnlocked = false;
+      immortalTitle = '';
+      immortalTitleUnlocked = false;
+      localStorage.removeItem(SAVE_KEY);
+      playerNameInput.value = '';
+      battleLogDiv.innerHTML = '';
+      battleResultDiv.textContent = '';
+      startScreen.style.display = 'flex';
+      autoBattleToggle.checked = false;
+    }
+
+    /* ========== UI 切换 & 更新 ========== */
+
+    function switchPage(page) {
+      currentPage = page;
+      pageCultivation.style.display = (page === 'cultivation') ? 'block' : 'none';
+      pageBattle.style.display      = (page === 'battle')      ? 'block' : 'none';
+      pageShop.style.display        = (page === 'shop')        ? 'block' : 'none';
+
+      navItems.forEach(item => {
+        item.classList.toggle('active', item.dataset.page === page);
+      });
+    }
+
+    function updateUI() {
+      const meta = getLingRootTierMeta();
+      const effectiveQps = qiPerSecond * meta.qiMult;
+      const effectiveQpc = qiPerClick * meta.qiMult;
+
+      qiSpan.textContent  = qi.toFixed(1);
+      qpsSpan.textContent = effectiveQps.toFixed(1);
+      qpcSpan.textContent = effectiveQpc.toFixed(1);
+
+      realmSpan.textContent = getRealmNameFromStage(realmStage);
+
+      expMainSpan.textContent = experience;
+      const expReq = getCurrentExpRequirementForBreak(realmStage, experience);
+      expReqSpan.textContent = expReq > 0 ? expReq : '—';
+
+      const dmgBuffPercent = Math.min(experience * 0.2, 50);
+      experienceSpan.textContent     = experience;
+      experienceBuffSpan.textContent = dmgBuffPercent.toFixed(1);
+
+      statPowerSpan.textContent    = stats.power;
+      statPhysiqueSpan.textContent = stats.physique;
+      statAgilitySpan.textContent  = stats.agility;
+      statSpiritSpan.textContent   = stats.spirit;
+      statRootSpan.textContent     = stats.root;
+      statLuckSpan.textContent     = stats.luck;
+
+      abilityPointsSpan.textContent    = abilityPoints;
+      spiritStonesSpan.textContent     = spiritStones;
+      shopSpiritStonesSpan.textContent = spiritStones;
+
+      // 市集：洞府
+      const caveBuyCost = getCaveBuyCost();
+      const caveUpCost  = getCaveUpgradeCost();
+      caveCostSpan.textContent = caveBuyCost;
+      caveCountSpan.textContent = caveCount;
+      caveQualitySpan.textContent = getCaveQualityName();
+      caveUpgradeCostSpan.textContent = caveUpCost;
+      caveQpsSpan.textContent = getCaveQps().toFixed(2);
+
+      // 市集：丹药
+      const pillBuyCost = getPillBuyCost();
+      const pillUpCost  = getPillUpgradeCost();
+      pillCostSpan.textContent = pillBuyCost;
+      pillLevelSpan.textContent = pillLevel;
+      pillQualitySpan.textContent = getPillQualityName();
+      pillUpgradeCostSpan.textContent = pillUpCost;
+
+      // 按钮可用性
+      plusButtons.forEach(btn => {
+        btn.disabled = abilityPoints <= 0 || !gameStarted;
+      });
+
+      buyCaveBtn.disabled =
+        !gameStarted || spiritStones < caveBuyCost;
+      upgradeCaveBtn.disabled =
+        !gameStarted || caveQuality >= MAX_CAVE_QUALITY || spiritStones < caveUpCost;
+
+      buyPillBtn.disabled =
+        !gameStarted || spiritStones < pillBuyCost;
+      upgradePillBtn.disabled =
+        !gameStarted || pillQuality >= MAX_PILL_QUALITY || spiritStones < pillUpCost;
+
+      breakthroughBtn.disabled = !canManualBreakthrough();
+
+      // 显示道号 + 神· + 仙号
+      let displayName = playerName || '未命名';
+      if (godTitleUnlocked) displayName = '神·' + displayName;
+      if (immortalTitle) displayName = immortalTitle + '·' + displayName;
+      playerNameSpan.textContent = displayName;
+
+      autoBattleToggle.checked = autoBattle;
+
+      updateLingRootUI();
+      updateBattleStatsUI();
+    }
+
+    /* ========== 游历日志 & 结算 ========= */
+
+    function appendBattleLog(msg) {
+      const line = document.createElement('div');
+      line.textContent = msg;
+      battleLogDiv.appendChild(line);
+      battleLogDiv.scrollTop = battleLogDiv.scrollHeight;
+    }
+
+    function handleRandomEncounter(outcome, battleData) {
+      const meta = getLingRootTierMeta();
+      const baseChance = 0.25;
+      let chance = baseChance * meta.eventMult;
+      if (chance > 0.9) chance = 0.9;
+
+      let triggered = false;
+      let text = '';
+      let extraQi = 0;
+      let extraStones = 0;
+      let extraAbility = 0;
+      let breakthrough = false;
+
+      if (Math.random() >= chance) {
+        text = '这次游历风平浪静，未触发明显奇遇。 ' + getRandomEventText();
+        return { triggered, text, extraQi, extraStones, extraAbility, breakthrough };
+      }
+
+      triggered = true;
+
+      const options = ['stoneBurst', 'qiSurge', 'realmInsight', 'bigRealmFreeBreak', 'caveDiscover'];
+      let type = options[Math.floor(Math.random() * options.length)];
+
+      const isBigRound = isBigRoundStage(realmStage)
+        && realmStage < REALM_NAMES.length - 1;
+
+      if (!isBigRound && type === 'bigRealmFreeBreak') {
+        type = 'qiSurge';
+      }
+
+      if (type === 'stoneBurst') {
+        const idx = Math.max(0, getBigRealmIndex(realmStage));
+        extraStones = 1 + Math.floor(Math.random() * (2 + idx));
+        spiritStones += extraStones;
+        text = `奇遇：你在归途中意外发现一小堆灵石，额外获得 ${extraStones} 枚灵石。`;
+      } else if (type === 'qiSurge') {
+        const extraQiBase = 10 + qiPerSecond * 20;
+        extraQi = Math.floor(extraQiBase);
+        gainQi(extraQi, 'event');
+        text = `奇遇：不破不立，你在回想这次游历时气机鼓荡，一口气提升了 ${extraQi} 点真气。`;
+      } else if (type === 'realmInsight') {
+        const nextStage = realmStage + 1;
+        if (nextStage < realmThresholds.length && qi >= realmThresholds[nextStage]) {
+          // 直接小突破
+          realmStage++;
+          applyStageBonus(realmStage);
+          if (isBigRoundStage(realmStage)) {
+            applyRealmBonus(realmStage);
+          }
+          checkBreakthrough();
+          breakthrough = true;
+          text = `奇遇：此次游历让你感悟许多，境界悄然突破至「${getRealmNameFromStage(realmStage)}」。`;
+        } else {
+          extraAbility = 1;
+          abilityPoints += 1;
+          text = '奇遇：你对战斗细节回味良久，心有所悟，额外获得 1 点能力点。';
+        }
+      } else if (type === 'bigRealmFreeBreak') {
+        const nextStage = realmStage + 1;
+        if (isBigRound && nextStage < realmThresholds.length && qi >= realmThresholds[nextStage]) {
+          realmStage++;
+          applyStageBonus(realmStage);
+          if (isBigRoundStage(realmStage)) {
+            applyRealmBonus(realmStage);
+          }
+          checkBreakthrough();
+          breakthrough = true;
+          text = `奇遇：你本就处于大圆满边缘，在这次游历胜利后，无需额外历练便直接突破至「${getRealmNameFromStage(realmStage)}」。`;
+        } else {
+          text = '奇遇：你隐约感到瓶颈松动，却仍差一步火候。';
+        }
+      } else if (type === 'caveDiscover') {
+        if (caveQuality < MAX_CAVE_QUALITY) {
+          caveQuality++;
+          recalcDerivedStats();
+          text = `奇遇：你在山间发现一处灵气愈发浑厚的洞窟，将原有洞府据此改造，洞府品质提升为「${getCaveQualityName()}」，自动修炼速度大幅提升。`;
+        } else {
+          extraStones = 2 + Math.floor(Math.random() * 3);
+          spiritStones += extraStones;
+          text = `奇遇：你打算改造洞府，却发现已难以更进一步，只得把心思转为搜刮附近资源，额外获得 ${extraStones} 枚灵石。`;
+        }
+      }
+
+      text += ' ' + getRandomEventText();
+      return { triggered, text, extraQi, extraStones, extraAbility, breakthrough };
+    }
+
+    function showBattleResultOverlay(outcome, battleData, rewards, eventInfo) {
+      resultTitle.textContent =
+        outcome === 'win' ? '游历胜利'
+        : outcome === 'lose' ? '游历受挫'
+        : '不分胜负';
+
+      const enemyName = battleData.enemy.name;
+      const summaryLines = [];
+      if (outcome === 'win') {
+        summaryLines.push(`你成功击败了「${enemyName}」。`);
+      } else if (outcome === 'lose') {
+        summaryLines.push(`你被「${enemyName}」击退，只得暂且撤离。`);
+      } else {
+        summaryLines.push(`你与「${enemyName}」鏖战多回合，最终暂且罢手。`);
+      }
+      summaryLines.push(`本次游历共进行了 ${battleData.turn - 1} 个回合。`);
+      resultSummary.textContent = summaryLines.join(' ');
+
+      const dropsText = [
+        rewards.qiReward > 0     ? `真气：+${rewards.qiReward}` : null,
+        rewards.expGain > 0      ? `历练值：+${rewards.expGain}（总历练：${experience}）` : `历练值：无增长`,
+        rewards.abilityGain > 0  ? `能力点：+${rewards.abilityGain}（可用：${abilityPoints}）` : null,
+        rewards.stoneReward > 0  ? `灵石：+${rewards.stoneReward}（总计：${spiritStones}）` : null
+      ].filter(Boolean).join(' · ');
+      resultDrops.textContent = dropsText || '本次未获得显著战利品。';
+
+      let extra = '';
+      if (isBigRoundStage(realmStage)) {
+        const req = getCurrentExpRequirementForBreak(realmStage, experience);
+        extra = `当前境界：${getRealmNameFromStage(realmStage)}；突破到下一大境界所需历练值约为 ${req}。`;
+      } else {
+        extra = `当前境界：${getRealmNameFromStage(realmStage)}。`;
+      }
+      resultExtra.textContent = extra;
+
+      randomEventDiv.textContent = eventInfo.text || '本次未触发奇遇。';
+
+      battleResultOverlay.style.display = 'flex';
+    }
+
+    function endBattle(outcome) {
+      if (!currentBattle) return;
+      clearInterval(battleTimerId);
+      battleTimerId = null;
+      startBattleBtn.disabled = false;
+
+      const battleData = currentBattle;
+      currentBattle = null;
+
+      const map = battleData.map;
+      const rewardMult = map.rewardMult;
+
+      let qiReward = 0;
+      let stoneReward = 0;
+
+      const idx = Math.max(0, getBigRealmIndex(realmStage));
+
+      if (outcome === 'win') {
+        const baseQi = 6 + idx * 3;
+        qiReward = Math.round((baseQi + Math.random() * (5 + idx * 3)) * rewardMult);
+        stoneReward = (Math.random() < 0.7)
+          ? 1 + Math.floor(Math.random() * (1 + idx + 1))
+          : 0;
+      } else if (outcome === 'lose') {
+        qiReward = Math.round((2 + idx) * rewardMult);
+      } else {
+        qiReward = Math.round((3 + idx) * rewardMult);
+      }
+
+      let expGain = 0;
+      if (outcome === 'win') {
+        expGain = Math.max(1, Math.round((3 + idx * 2) * rewardMult));
+      } else if (outcome === 'lose') {
+        expGain = Math.max(1, Math.round((1 + idx) * rewardMult));
+      } else {
+        expGain = Math.max(1, Math.round((2 + idx) * rewardMult));
+      }
+      experience += expGain;
+
+      const abilityBefore = battleData.abilityBefore;
+      const expBefore = battleData.expBefore;
+
+      if (qiReward > 0) gainQi(qiReward, 'battle');
+      if (stoneReward > 0) spiritStones += stoneReward;
+
+      const eventInfo = handleRandomEncounter(outcome, battleData);
+
+      const abilityGain = abilityPoints - abilityBefore;
+      const totalExpGain = experience - expBefore;
+      const totalStoneReward = stoneReward + (eventInfo.extraStones || 0);
+
+      updateUI();
+
+      const shouldShowOverlay = !(autoBattle && currentPage !== 'battle');
+      if (shouldShowOverlay) {
+        showBattleResultOverlay(outcome, battleData, {
+          qiReward,
+          stoneReward: totalStoneReward,
+          expGain: totalExpGain,
+          abilityGain
+        }, eventInfo);
+      } else {
+        // 自动结算模式：不弹出结算窗口，只在游历页简单提示
+        battleResultDiv.textContent =
+          `一场游历已结束（${outcome === 'win' ? '胜利' : outcome === 'lose' ? '受挫' : '平局'}），奖励已自动结算。`;
+        saveGame();
+      }
+    }
+
+    function runBattleTurn() {
+      if (!currentBattle) {
+        clearInterval(battleTimerId);
+        battleTimerId = null;
+        return;
+      }
+      const b = currentBattle;
+      const eff = b.effects;
+
+      if (b.player.hp <= 0 || b.enemy.hp <= 0 || b.turn > MAX_TURNS) {
+        let outcome = 'draw';
+        if (b.player.hp > 0 && b.enemy.hp <= 0) outcome = 'win';
+        else if (b.enemy.hp > 0 && b.player.hp <= 0) outcome = 'lose';
+        endBattle(outcome);
+        return;
+      }
+
+      if (b.currentActor === 'player') {
+        if (eff.regenPerTurn > 0) {
+          const oldHp = b.player.hp;
+          b.player.hp = Math.min(b.player.maxHp, b.player.hp + eff.regenPerTurn);
+          if (b.player.hp > oldHp) {
+            appendBattleLog(`回合 ${b.turn}：你的体魄恢复了 ${b.player.hp - oldHp} 点生命。`);
+          }
+        }
+
+        const effectiveAtk = b.player.atk;
+        let dmg = calcDamage(effectiveAtk, b.enemy.physique, b.enemy.root);
+
+        let crit = false;
+        if (eff.critChance > 0 && Math.random() < eff.critChance) {
+          crit = true;
+          dmg = Math.floor(dmg * eff.critMul);
+        }
+
+        const dodgeRoll = Math.random();
+        if (dodgeRoll < b.enemy.dodge) {
+          appendBattleLog(`回合 ${b.turn}：你出手攻击，但「${b.enemy.name}」闪避了这一击。`);
+        } else {
+          b.enemy.hp = Math.max(0, b.enemy.hp - dmg);
+          let text = `回合 ${b.turn}：你攻击「${b.enemy.name}」，造成 ${dmg} 点伤害（对方剩余 ${b.enemy.hp}）。`;
+          if (crit) text += '【暴击】';
+          appendBattleLog(text);
+        }
+
+        let changeTurn = true;
+        if (b.enemy.hp > 0 && eff.extraTurnChance > 0 && Math.random() < eff.extraTurnChance) {
+          appendBattleLog('时间似乎为你停滞了一瞬，你抓住空隙再次出手！');
+          changeTurn = false;
+        }
+
+        b.currentActor = changeTurn ? 'enemy' : 'player';
+        b.turn++;
+      } else {
+        const dodgeRoll = Math.random();
+        if (dodgeRoll < b.player.dodge) {
+          appendBattleLog(`回合 ${b.turn}：「${b.enemy.name}」攻击你，但你身形一闪躲了过去。`);
+        } else {
+          let dmg = calcDamage(b.enemy.atk, b.player.physDef, b.player.rootDef);
+          dmg = Math.floor(dmg * eff.damageTakenMul);
+          if (dmg < 1) dmg = 1;
+          b.player.hp = Math.max(0, b.player.hp - dmg);
+          appendBattleLog(
+            `回合 ${b.turn}：「${b.enemy.name}」攻击你，造成 ${dmg} 点伤害（你剩余 ${b.player.hp}）。`
+          );
+        }
+        b.currentActor = 'player';
+        b.turn++;
+      }
+    }
+
+    function startBattle() {
+      if (!gameStarted) {
+        battleResultDiv.textContent = '请先踏入修仙并完成命名。';
+        return;
+      }
+      if (battleTimerId) return;
+
+      const pBase = getPlayerBattleStats();
+      const eff = getLingRootBattleEffects();
+      const map = getCurrentMap();
+      const enemyBase = generateRandomEnemy(map.enemyStage);
+
+      const maxHp = Math.floor(pBase.maxHp * eff.hpMul);
+      const atk   = Math.floor(pBase.atk * eff.atkMul);
+      const dodge = Math.min(0.5, pBase.dodge + eff.dodgeBonus);
+      const spd   = Math.floor(pBase.spd * eff.speedMul);
+
+      const enemy = {
+        name: enemyBase.name,
+        maxHp: enemyBase.maxHp,
+        hp: enemyBase.hp,
+        atk: enemyBase.atk,
+        dodge: enemyBase.dodge,
+        spd: Math.floor(enemyBase.spd * eff.enemySpeedMul),
+        physique: enemyBase.physique,
+        root: enemyBase.root
+      };
+
+      currentBattle = {
+        player: {
+          hp: maxHp,
+          maxHp,
+          atk,
+          dodge,
+          spd,
+          physDef: stats.physique,
+          rootDef: stats.root
+        },
+        enemy,
+        turn: 1,
+        currentActor: null,
+        effects: eff,
+        map,
+        abilityBefore: abilityPoints,
+        expBefore: experience
+      };
+
+      battleLogDiv.innerHTML = '';
+      battleResultDiv.textContent = '';
+
+      appendBattleLog(`游历开始！你在「${map.name}」与「${enemy.name}」展开试炼。`);
+      if (currentBattle.player.spd >= currentBattle.enemy.spd) {
+        currentBattle.currentActor = 'player';
+        appendBattleLog('你身法更快，率先出手。');
+      } else {
+        currentBattle.currentActor = 'enemy';
+        appendBattleLog(`「${enemy.name}」先发制人！`);
+      }
+
+      startBattleBtn.disabled = true;
+      battleTimerId = setInterval(runBattleTurn, BATTLE_TURN_DELAY);
+    }
+
+    /* ========== 真气获取 ========== */
+
+    function gainQi(amount, source) {
+      if (!gameStarted) return;
+      const meta = getLingRootTierMeta();
+      let finalAmount = amount;
+      if (['auto','click','battle','event'].includes(source)) {
+        finalAmount *= meta.qiMult;
+      }
+
+      const oldStage = realmStage;
+      qi += finalAmount;
+      rollAbilityPoint(source);
+      checkBreakthrough();
+
+      if (realmStage > oldStage && currentBattle) {
+        appendBattleLog(`在激战中，你体内真气沸腾，境界突破至「${getRealmNameFromStage(realmStage)}」！`);
+      }
+    }
+
+    /* ========== 交互绑定 ========== */
+
+    // 底部导航
+    navItems.forEach(item => {
+      item.addEventListener('click', () => {
+        const page = item.dataset.page;
+        switchPage(page);
+      });
+    });
+
+    // 地图选择
+    mapSelect.addEventListener('change', () => {
+      currentMapId = mapSelect.value;
+      saveGame();
+    });
+
+    // 自动战斗结算开关
+    autoBattleToggle.addEventListener('change', () => {
+      autoBattle = autoBattleToggle.checked;
+      saveGame();
+    });
+
+    // 修炼操作
+    cultivateBtn.addEventListener('click', () => {
+      gainQi(qiPerClick, 'click');
+      updateUI();
+    });
+
+    // 市集：洞府
+    buyCaveBtn.addEventListener('click', () => {
+      if (!gameStarted) return;
+      const cost = getCaveBuyCost();
+      if (spiritStones >= cost) {
+        spiritStones -= cost;
+        caveCount += 1;
+        recalcDerivedStats();
+        updateUI();
+      }
+    });
+
+    upgradeCaveBtn.addEventListener('click', () => {
+      if (!gameStarted) return;
+      if (caveQuality >= MAX_CAVE_QUALITY) return;
+      const cost = getCaveUpgradeCost();
+      if (spiritStones >= cost) {
+        spiritStones -= cost;
+        caveQuality += 1;
+        recalcDerivedStats();
+        updateUI();
+      }
+    });
+
+    // 市集：丹药
+    buyPillBtn.addEventListener('click', () => {
+      if (!gameStarted) return;
+      const cost = getPillBuyCost();
+      if (spiritStones >= cost) {
+        spiritStones -= cost;
+        pillLevel += 1;
+        recalcDerivedStats();
+        updateUI();
+      }
+    });
+
+    upgradePillBtn.addEventListener('click', () => {
+      if (!gameStarted) return;
+      if (pillQuality >= MAX_PILL_QUALITY) return;
+      const cost = getPillUpgradeCost();
+      if (spiritStones >= cost) {
+        spiritStones -= cost;
+        pillQuality += 1;
+        recalcDerivedStats();
+        updateUI();
+      }
+    });
+
+    // 能力点加点
+    plusButtons.forEach(btn => {
+      btn.addEventListener('click', () => {
+        if (!gameStarted) return;
+        const key = btn.dataset.stat;
+        if (abilityPoints > 0 && stats[key] != null) {
+          abilityPoints--;
+          stats[key] += 1;
+          updateUI();
+        }
+      });
+    });
+
+    saveBtn.addEventListener('click', () => {
+      saveGame();
+      saveBtn.textContent = '已保存 ✔';
+      setTimeout(() => { saveBtn.textContent = '手动保存'; }, 1000);
+    });
+
+    resetBtn.addEventListener('click', () => {
+      if (confirm('确定要清空存档并从凡人境界重新修炼吗？')) {
+        resetGame();
+        updateUI();
+        switchPage('cultivation');
+      }
+    });
+
+    startBattleBtn.addEventListener('click', () => {
+      startBattle();
+    });
+
+    closeResultBtn.addEventListener('click', () => {
+      battleResultOverlay.style.display = 'none';
+      updateUI();
+      saveGame();
+    });
+
+    breakthroughBtn.addEventListener('click', () => {
+      doManualBreakthrough();
+    });
+
+    startGameBtn.addEventListener('click', () => {
+      let name = playerNameInput.value.trim();
+      if (!name) name = '无名散修';
+      playerName = name;
+      if (!lingRoots || lingRoots.length === 0) {
+        lingRoots = generateLingRoots();
+      }
+      gameStarted = true;
+      startScreen.style.display = 'none';
+      saveGame();
+      updateUI();
+    });
+
+    /* ========== 放置循环 & 自动存档 ========== */
+
+    setInterval(() => {
+      if (!gameStarted) return;
+      gainQi(qiPerSecond, 'auto');
+      updateUI();
+    }, 1000);
+
+    setInterval(() => {
+      if (!gameStarted) return;
+      saveGame();
+    }, 5000);
+
+    /* ========== 初始化 ========== */
+
+    generateMaps();
+    loadGame();
+    initMaps();
+
+    if (playerName) {
+      gameStarted = true;
+      startScreen.style.display = 'none';
+    } else {
+      gameStarted = false;
+      startScreen.style.display = 'flex';
+    }
+
+    switchPage('cultivation');
+    updateUI();
+  </script>
+</body>
+</html>
+
