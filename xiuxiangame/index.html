@@ -303,7 +303,7 @@ button:disabled {
   margin-bottom: 10px;
 }
 
-/* 游历结算 & 随机事件弹层 */
+/* 游历结算 & 随机事件弹层（只用于手动战斗模式） */
 .overlay-screen {
   position: fixed;
   inset: 0;
@@ -375,7 +375,7 @@ button:disabled {
     </div>
   </div>
 
-  <!-- 游历结算 / 随机事件 -->
+  <!-- 游历结算 / 随机事件（仅手动战斗时使用） -->
   <div id="battleResultOverlay" class="overlay-screen">
     <div class="result-card">
       <h2 id="resultTitle">游历结果</h2>
@@ -507,7 +507,7 @@ button:disabled {
           <div class="hint">
             <label>
               <input type="checkbox" id="autoBattleToggle">
-              自动战斗结算（在修炼 / 市集界面时不弹出结算窗口）
+              自动战斗结算（勾选后持续游历，不再弹出结算窗口）
             </label>
           </div>
           <button id="startBattleBtn" class="btn-main">开始游历试炼</button>
@@ -761,9 +761,9 @@ button:disabled {
 
     for (let i = 1; i < BIG_REALMS.length; i++) {
       const base = Math.pow(10, i - 1) * 10; // 10,100,1000,10000,...
-      const factors = [1, 2.5, 5, 9];        // 10/25/50/90, 100/250/500/900, ...
+      const factors = [1, 2.5, 5, 9];        // 10/25/50/90...
       for (let j = 0; j < 4; j++) {
-        const stageIndex = (i - 1) * 4 + j + 1; // 1..4: 辟谷, 5..8: 炼体, ...
+        const stageIndex = (i - 1) * 4 + j + 1;
         REALM_NAMES[stageIndex] = BIG_REALMS[i] + REALM_SUFFIXES[j];
         realmThresholds[stageIndex] = Math.floor(base * factors[j]);
       }
@@ -775,14 +775,13 @@ button:disabled {
 
     function getBigRealmIndex(stage) {
       if (stage <= 0) return -1;
-      return Math.floor((stage - 1) / 4); // 0:辟谷,1:炼体,...,10:仙班
+      return Math.floor((stage - 1) / 4); // 辟谷=0, 炼体=1,...
     }
 
     function isBigRoundStage(stage) {
       return stage > 0 && stage % 4 === 0;
     }
 
-    // 11 个大境界的大圆满加成（数值可继续调）
     const REALM_BIG_BONUSES = [
       { power: 1,  physique: 2,  agility: 1,  spirit: 1,  root: 2,  luck: 0 }, // 辟谷
       { power: 2,  physique: 3,  agility: 2,  spirit: 1,  root: 2,  luck: 1 }, // 炼体
@@ -801,10 +800,10 @@ button:disabled {
       0.02, 0.04, 0.06, 0.09, 0.12, 0.16, 0.20, 0.25, 0.30, 0.40, 0.50
     ];
 
-    // 每个大境大圆满突破到下一大境界所需历练值：50、500、5000、50000……
+    // 50、500、5000、50000……
     function getExpThresholdForBigRealmIndex(idx) {
       if (idx < 0) return 0;
-      return 50 * Math.pow(10, idx); // 50,500,5000,50000,...
+      return 50 * Math.pow(10, idx);
     }
 
     function getCurrentExpRequirementForBreak(stage, experience) {
@@ -834,8 +833,8 @@ button:disabled {
     let autoBattle = false;
 
     let qi = 0;
-    let qiPerSecond = 0.1;   // 由基础 + 洞府 + 境界加成组合
-    let qiPerClick = 1.0;    // 由基础 + 丹药组合
+    let qiPerSecond = 0.1;
+    let qiPerClick = 1.0;
     let realmStage = 0;
 
     const baseStats = {
@@ -854,7 +853,7 @@ button:disabled {
     let pillLevel = 1;
     let pillQuality = 1;
 
-    // 修炼基础：被品质和境界修正
+    // 修炼基础
     let baseQiPerSecond = 0.1;
     let realmQpsBonus = 0;
     const caveQiPerBase = 0.2;
@@ -924,7 +923,7 @@ button:disabled {
         (pillLevel - 1) * (1 + 0.4 * (pillQuality - 1));
     }
 
-    /* ========== 地图（为每个境界生成一个游历目的地） ========== */
+    /* ========== 地图 ========= */
 
     let MAPS = [];
 
@@ -986,7 +985,6 @@ button:disabled {
     const pageShop = document.getElementById('pageShop');
     const navItems = document.querySelectorAll('.nav-item');
 
-    // 市集相关
     const caveCostSpan = document.getElementById('caveCost');
     const caveCountSpan = document.getElementById('caveCount');
     const caveQualitySpan = document.getElementById('caveQualitySpan');
@@ -1019,7 +1017,7 @@ button:disabled {
     const randomEventDiv = document.getElementById('randomEvent');
     const closeResultBtn = document.getElementById('closeResultBtn');
 
-    const SAVE_KEY = 'xiuxianIdleSave_v7';
+    const SAVE_KEY = 'xiuxianIdleSave_v8';
 
     /* ========== 灵根 UI ========== */
 
@@ -1061,11 +1059,12 @@ button:disabled {
           `<span>能力倾向：</span><span>${r1.name} 与 ${r2.name} 并存。${rel.descExtra}</span>`;
         lingRootTableDiv.appendChild(row2);
       } else {
-        // 单灵根 / 稀有灵根：逐个展示
+        // 单灵根 / 稀有灵根
         lingRoots.forEach(r => {
           const row1 = document.createElement('div');
           row1.className = 'ling-root-row';
-          row1.innerHTML = `<span>${r.name}</span><span>层级：${r.tierGroup} · 类型：${r.type === 'special' ? '稀有' : '五行'}</span>`;
+          row1.innerHTML =
+            `<span>${r.name}</span><span>层级：${r.tierGroup} · 类型：${r.type === 'special' ? '稀有' : '五行'}</span>`;
           lingRootTableDiv.appendChild(row1);
 
           const row2 = document.createElement('div');
@@ -1086,7 +1085,7 @@ button:disabled {
     function applyStageBonus(stage) {
       if (stage <= 0) return;
       const bigIdx = getBigRealmIndex(stage);
-      const incBase = 1 + Math.floor(bigIdx / 2); // 后期境界每升一级加得更多
+      const incBase = 1 + Math.floor(bigIdx / 2);
 
       stats.power    += incBase;
       stats.physique += incBase + 1;
@@ -1095,7 +1094,6 @@ button:disabled {
       stats.root     += incBase + 1;
       stats.luck     += Math.max(1, Math.floor(incBase / 2));
 
-      // 化神称号 / 仙班仙号：在进入对应大境界「前期」时触发
       if (stage % 4 === 1) {
         if (bigIdx === 9 && !godTitleUnlocked) {
           godTitleUnlocked = true;
@@ -1103,8 +1101,10 @@ button:disabled {
         }
         if (bigIdx === 10 && !immortalTitleUnlocked) {
           immortalTitleUnlocked = true;
-          const name = prompt('恭喜你成功晋级「仙班」！请为自己取一个仙号（将显示在道号前）：',
-                              '某某上仙');
+          const name = prompt(
+            '恭喜你成功晋级「仙班」！请为自己取一个仙号（将显示在道号前）：',
+            '某某上仙'
+          );
           if (name && name.trim()) {
             immortalTitle = name.trim();
           }
@@ -1134,7 +1134,7 @@ button:disabled {
       while (realmStage < realmThresholds.length - 1) {
         const nextStage = realmStage + 1;
         if (qi < realmThresholds[nextStage]) break;
-        if (isBigRoundStage(realmStage)) break; // 大圆满需要手动突破
+        if (isBigRoundStage(realmStage)) break;
         realmStage = nextStage;
         applyStageBonus(realmStage);
         if (isBigRoundStage(realmStage)) {
@@ -1142,9 +1142,7 @@ button:disabled {
         }
         upgraded = true;
       }
-      if (upgraded) {
-        recalcDerivedStats();
-      }
+      if (upgraded) recalcDerivedStats();
     }
 
     function canManualBreakthrough() {
@@ -1164,10 +1162,9 @@ button:disabled {
     function doManualBreakthrough() {
       if (!canManualBreakthrough()) return;
 
-      // 从筑基大圆满开始，有失败几率：筑基→金丹 1%，金丹→元婴 2%，以此类推
-      const bigIdxCurrent = getBigRealmIndex(realmStage); // 辟谷=0, 炼体=1,...,仙班=10
+      const bigIdxCurrent = getBigRealmIndex(realmStage);
       if (bigIdxCurrent >= 3) {
-        const failChance = (bigIdxCurrent - 2) / 100; // 3→1%，4→2%，...
+        const failChance = (bigIdxCurrent - 2) / 100;
         if (Math.random() < failChance) {
           const lost = Math.floor(qi * 0.1);
           qi = Math.max(0, qi - lost);
@@ -1178,14 +1175,11 @@ button:disabled {
       }
 
       const oldName = getRealmNameFromStage(realmStage);
-      const targetStage = realmStage + 1;
-
-      realmStage = targetStage;
+      realmStage = realmStage + 1;
       applyStageBonus(realmStage);
       if (isBigRoundStage(realmStage)) {
         applyRealmBonus(realmStage);
       }
-      // 真气足够的话，继续自动跨小阶段
       checkBreakthrough();
       recalcDerivedStats();
       const newName = getRealmNameFromStage(realmStage);
@@ -1193,10 +1187,9 @@ button:disabled {
       alert(`你从「${oldName}」突破到了「${newName}」！`);
     }
 
-    /* ========== 能力点掉落（变难 + 受灵根 & 气运影响） ========== */
+    /* ========== 能力点掉落（难度提高） ========== */
 
     function rollAbilityPoint(source) {
-      // 比之前难度高：自动 0.4%，点击 1.8% 基础
       const base = (source === 'auto') ? 0.004 : 0.018;
       const meta = getLingRootTierMeta();
       const lingMult = meta.abilityMult;
@@ -1209,10 +1202,9 @@ button:disabled {
       }
     }
 
-    /* ========== 游历属性（历练给微弱增伤） ========== */
+    /* ========== 游历属性 ========= */
 
     function getPlayerBattleStats() {
-      // 每点历练 +0.2% 伤害，上限 +50%
       const expBuff = 1 + Math.min(experience * 0.002, 0.5);
       const maxHp = 90 + stats.physique * 9 + stats.root * 6;
       const mpMax = 50 + stats.spirit * 5;
@@ -1246,7 +1238,7 @@ button:disabled {
         `闪避 ${(base.dodge * 100).toFixed(1)}% · 速度 ${base.spd}`;
     }
 
-    // 灵根暂不影响战斗数值（预留）
+    // 灵根不影响战斗数值（预留）
     function getLingRootBattleEffects() {
       return {
         atkMul: 1,
@@ -1265,7 +1257,7 @@ button:disabled {
       };
     }
 
-    /* ========== 伤害公式（略提高伤害，缩短游历战斗） ========== */
+    /* ========== 伤害公式 ========= */
 
     function calcDamage(attackerAtk, defenderPhysique, defenderRoot) {
       const defScore = defenderPhysique * 0.6 + defenderRoot * 0.4;
@@ -1472,6 +1464,11 @@ button:disabled {
       navItems.forEach(item => {
         item.classList.toggle('active', item.dataset.page === page);
       });
+
+      // 切到游历页且已开启自动战斗时，如果没有战斗就自动开一局
+      if (page === 'battle') {
+        maybeStartAutoBattle();
+      }
     }
 
     function updateUI() {
@@ -1504,7 +1501,6 @@ button:disabled {
       spiritStonesSpan.textContent     = spiritStones;
       shopSpiritStonesSpan.textContent = spiritStones;
 
-      // 市集：洞府
       const caveBuyCost = getCaveBuyCost();
       const caveUpCost  = getCaveUpgradeCost();
       caveCostSpan.textContent = caveBuyCost;
@@ -1513,7 +1509,6 @@ button:disabled {
       caveUpgradeCostSpan.textContent = caveUpCost;
       caveQpsSpan.textContent = getCaveQps().toFixed(2);
 
-      // 市集：丹药
       const pillBuyCost = getPillBuyCost();
       const pillUpCost  = getPillUpgradeCost();
       pillCostSpan.textContent = pillBuyCost;
@@ -1521,7 +1516,6 @@ button:disabled {
       pillQualitySpan.textContent = getPillQualityName();
       pillUpgradeCostSpan.textContent = pillUpCost;
 
-      // 按钮可用性
       plusButtons.forEach(btn => {
         btn.disabled = abilityPoints <= 0 || !gameStarted;
       });
@@ -1538,7 +1532,6 @@ button:disabled {
 
       breakthroughBtn.disabled = !canManualBreakthrough();
 
-      // 显示道号 + 神· + 仙号
       let displayName = playerName || '未命名';
       if (godTitleUnlocked) displayName = '神·' + displayName;
       if (immortalTitle) displayName = immortalTitle + '·' + displayName;
@@ -1602,7 +1595,6 @@ button:disabled {
       } else if (type === 'realmInsight') {
         const nextStage = realmStage + 1;
         if (nextStage < realmThresholds.length && qi >= realmThresholds[nextStage]) {
-          // 直接小突破
           realmStage++;
           applyStageBonus(realmStage);
           if (isBigRoundStage(realmStage)) {
@@ -1739,7 +1731,8 @@ button:disabled {
 
       updateUI();
 
-      const shouldShowOverlay = !(autoBattle && currentPage !== 'battle');
+      // 自动战斗模式下不弹结算窗口
+      const shouldShowOverlay = !autoBattle;
       if (shouldShowOverlay) {
         showBattleResultOverlay(outcome, battleData, {
           qiReward,
@@ -1748,10 +1741,16 @@ button:disabled {
           abilityGain
         }, eventInfo);
       } else {
-        // 自动结算模式：不弹出结算窗口，只在游历页简单提示
         battleResultDiv.textContent =
           `一场游历已结束（${outcome === 'win' ? '胜利' : outcome === 'lose' ? '受挫' : '平局'}），奖励已自动结算。`;
         saveGame();
+      }
+
+      // 自动战斗：稍作停顿后自动开下一局
+      if (autoBattle) {
+        setTimeout(() => {
+          maybeStartAutoBattle();
+        }, 800);
       }
     }
 
@@ -1831,7 +1830,7 @@ button:disabled {
         battleResultDiv.textContent = '请先踏入修仙并完成命名。';
         return;
       }
-      if (battleTimerId) return;
+      if (battleTimerId || currentBattle) return;
 
       const pBase = getPlayerBattleStats();
       const eff = getLingRootBattleEffects();
@@ -1889,6 +1888,14 @@ button:disabled {
       battleTimerId = setInterval(runBattleTurn, BATTLE_TURN_DELAY);
     }
 
+    // 自动战斗：在满足条件时自动开一局
+    function maybeStartAutoBattle() {
+      if (!gameStarted) return;
+      if (!autoBattle) return;
+      if (currentBattle || battleTimerId) return;
+      startBattle();
+    }
+
     /* ========== 真气获取 ========== */
 
     function gainQi(amount, source) {
@@ -1911,7 +1918,6 @@ button:disabled {
 
     /* ========== 交互绑定 ========== */
 
-    // 底部导航
     navItems.forEach(item => {
       item.addEventListener('click', () => {
         const page = item.dataset.page;
@@ -1919,25 +1925,25 @@ button:disabled {
       });
     });
 
-    // 地图选择
     mapSelect.addEventListener('change', () => {
       currentMapId = mapSelect.value;
       saveGame();
     });
 
-    // 自动战斗结算开关
     autoBattleToggle.addEventListener('change', () => {
       autoBattle = autoBattleToggle.checked;
       saveGame();
+
+      if (autoBattle) {
+        maybeStartAutoBattle();
+      }
     });
 
-    // 修炼操作
     cultivateBtn.addEventListener('click', () => {
       gainQi(qiPerClick, 'click');
       updateUI();
     });
 
-    // 市集：洞府
     buyCaveBtn.addEventListener('click', () => {
       if (!gameStarted) return;
       const cost = getCaveBuyCost();
@@ -1961,7 +1967,6 @@ button:disabled {
       }
     });
 
-    // 市集：丹药
     buyPillBtn.addEventListener('click', () => {
       if (!gameStarted) return;
       const cost = getPillBuyCost();
@@ -1985,7 +1990,6 @@ button:disabled {
       }
     });
 
-    // 能力点加点
     plusButtons.forEach(btn => {
       btn.addEventListener('click', () => {
         if (!gameStarted) return;
@@ -2068,6 +2072,11 @@ button:disabled {
 
     switchPage('cultivation');
     updateUI();
+
+    // 读档后如果已经开启自动战斗，直接自动开局
+    if (gameStarted && autoBattle) {
+      maybeStartAutoBattle();
+    }
   </script>
 </body>
 </html>
