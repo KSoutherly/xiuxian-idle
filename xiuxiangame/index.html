@@ -845,88 +845,380 @@ button:disabled {
       mythic:    { label: '仙法', className: 'skill-rarity-mythic' }
     };
 
-    // type: method=心法, manual=秘籍, technique=武技
-    // source: sect / sectAndDrop / shop / shopAndDrop / drop
-    const ALL_SKILLS = {
-      // 示例一：心法·时如心流（时间灵根专属，仙法）
-      method_time_flow: {
-        id: 'method_time_flow',
-        name: '心法·时如心流',
-        type: 'method',
-        rarity: 'mythic',
-        source: 'sect',
-        price: 100000,
-        qiSpeedBonus: 0.5, // +50% 修炼速度
-        requirement: {
-          type: 'rootAnyOf',
-          ids: ['time']
-        },
-        desc: '时间如心中溪流，念起即流转。限定时间灵根者修炼，修炼速度 +50%。'
-      },
-      // 示例二：仙法秘籍·次元裂斩（空间灵根专属，战斗中一次性爆发）
-      manual_dimensional_slash: {
-        id: 'manual_dimensional_slash',
-        name: '秘籍·次元裂斩',
-        type: 'manual',
-        rarity: 'mythic',
-        source: 'sectAndDrop',
-        price: 100000,
-        requirement: {
-          type: 'rootAnyOf',
-          ids: ['space']
-        },
-        // battle 标记给战斗系统用
-        battle: {
-          burstDimSlash: true
-        },
-        desc: '限定空间灵根者修炼。战斗中可在某一回合斩出次元裂缝，对敌人造成约 2000% 的普通攻击伤害。'
-      },
-      // 基础五行心法：任何拥有五行灵根者都可修
-      method_five_cycle: {
-        id: 'method_five_cycle',
-        name: '心法·五行循环诀',
-        type: 'method',
-        rarity: 'rare',
-        source: 'sect',
-        price: 8000,
-        qiSpeedBonus: 0.2, // +20%
-        requirement: {
-          type: 'basicAny'
-        },
-        desc: '调和五行之气，使周身灵力循环不息。需具备任意五行灵根，修炼速度 +20%。'
-      },
-      // 武技：基础快斩，可在市集购买或掉落，增加攻击与暴击率
-      tech_quick_strike: {
-        id: 'tech_quick_strike',
-        name: '武技·闪风快斩',
-        type: 'technique',
-        rarity: 'uncommon',
-        source: 'shopAndDrop',
-        price: 2500,
-        requirement: null,
-        battle: {
-          atkMul: 1.12,       // 攻击 +12%
-          critChance: 0.08    // 额外 8% 暴击率
-        },
-        desc: '简单实用的近身快斩武技，适合大多数近战修士。被动提升攻击与少量暴击率。'
-      },
-      // 武技：铁骨护身，可在市集购买或掉落，增加生命与减伤
-      tech_iron_body: {
-        id: 'tech_iron_body',
-        name: '武技·铁骨护身诀',
-        type: 'technique',
-        rarity: 'rare',
-        source: 'shopAndDrop',
-        price: 5000,
-        requirement: null,
-        battle: {
-          hpMul: 1.18,            // 生命 +18%
-          damageTakenMul: 0.92    // 受到伤害 -8%
-        },
-        desc: '锤炼肉身与根骨，使筋骨如钢铁般坚韧。被动提升生命上限并降低所受伤害。'
-      }
-    };
+    // 功法 / 秘籍 / 武技 定义
+// type: method=心法, manual=秘籍, technique=武技
+// source: sect / sectAndDrop / shop / shopAndDrop / drop
+const ALL_SKILLS = {
+  /* ======================
+   *  T1 超限灵根 · 心法
+   * ====================== */
 
+  // 因果灵根
+  method_cause_silk: {
+    id: 'method_cause_silk',
+    name: '心法·因果牵丝',
+    type: 'method',
+    rarity: 'mythic',
+    source: 'sect',
+    price: 100000,
+    qiSpeedBonus: 0.5, // +50% 修炼速度
+    requirement: {
+      type: 'rootAnyOf',
+      ids: ['cause']
+    },
+    desc: '以心念为丝，勾连天地因果。限定因果灵根者修炼，修炼速度 +50%。'
+  },
+
+  // 时间灵根（旧示例保留）
+  method_time_flow: {
+    id: 'method_time_flow',
+    name: '心法·时如心流',
+    type: 'method',
+    rarity: 'mythic',
+    source: 'sect',
+    price: 100000,
+    qiSpeedBonus: 0.5, // +50% 修炼速度
+    requirement: {
+      type: 'rootAnyOf',
+      ids: ['time']
+    },
+    desc: '时间如心中溪流，念起即流转。限定时间灵根者修炼，修炼速度 +50%。'
+  },
+
+  // 空间灵根
+  method_space_fold: {
+    id: 'method_space_fold',
+    name: '心法·空相折叠',
+    type: 'method',
+    rarity: 'mythic',
+    source: 'sect',
+    price: 100000,
+    qiSpeedBonus: 0.5,
+    requirement: {
+      type: 'rootAnyOf',
+      ids: ['space']
+    },
+    desc: '感悟万物「空相」，折叠空间脉络。限定空间灵根者修炼，修炼速度 +50%。'
+  },
+
+  /* ======================
+   *  T2 高维规则灵根 · 心法
+   * ====================== */
+
+  // 圣灵根
+  method_holy_radiance: {
+    id: 'method_holy_radiance',
+    name: '心法·圣辉同尘诀',
+    type: 'method',
+    rarity: 'legendary',
+    source: 'sect',
+    price: 60000,
+    qiSpeedBonus: 0.4,
+    requirement: {
+      type: 'rootAnyOf',
+      ids: ['holy']
+    },
+    desc: '圣辉入尘，不染一尘。限定圣灵根者修炼，修炼速度 +40%。'
+  },
+
+  // 界灵根
+  method_realm_pillar: {
+    id: 'method_realm_pillar',
+    name: '心法·界镇寰宇',
+    type: 'method',
+    rarity: 'legendary',
+    source: 'sect',
+    price: 60000,
+    qiSpeedBonus: 0.4,
+    requirement: {
+      type: 'rootAnyOf',
+      ids: ['realm']
+    },
+    desc: '以自身为界柱，镇压一域气机。限定界灵根者修炼，修炼速度 +40%。'
+  },
+
+  // 光灵根
+  method_light_purify: {
+    id: 'method_light_purify',
+    name: '心法·光曜净世篇',
+    type: 'method',
+    rarity: 'legendary',
+    source: 'sect',
+    price: 60000,
+    qiSpeedBonus: 0.4,
+    requirement: {
+      type: 'rootAnyOf',
+      ids: ['light']
+    },
+    desc: '纳万物之光入体，心念所及皆为朗照。限定光灵根者修炼，修炼速度 +40%。'
+  },
+
+  // 暗灵根
+  method_dark_abyss: {
+    id: 'method_dark_abyss',
+    name: '心法·幽影入渊典',
+    type: 'method',
+    rarity: 'legendary',
+    source: 'sect',
+    price: 60000,
+    qiSpeedBonus: 0.4,
+    requirement: {
+      type: 'rootAnyOf',
+      ids: ['dark']
+    },
+    desc: '收敛万象之光，沉心入渊。限定暗灵根者修炼，修炼速度 +40%。'
+  },
+
+  /* ======================
+   *  T3 灵性 / 意识灵根 · 心法
+   * ====================== */
+
+  // 梦灵根
+  method_dream_illusion: {
+    id: 'method_dream_illusion',
+    name: '心法·梦行万景录',
+    type: 'method',
+    rarity: 'epic',
+    source: 'sect',
+    price: 35000,
+    qiSpeedBonus: 0.33,
+    requirement: {
+      type: 'rootAnyOf',
+      ids: ['dream']
+    },
+    desc: '睡梦中踏遍千山万水，于虚妄处悟真。限定梦灵根者修炼，修炼速度 +33%。'
+  },
+
+  // 灵灵根
+  method_spirit_listen: {
+    id: 'method_spirit_listen',
+    name: '心法·灵听万机诀',
+    type: 'method',
+    rarity: 'epic',
+    source: 'sect',
+    price: 35000,
+    qiSpeedBonus: 0.33,
+    requirement: {
+      type: 'rootAnyOf',
+      ids: ['spirit']
+    },
+    desc: '以灵识聆听天地细语。限定灵灵根者修炼，修炼速度 +33%。'
+  },
+
+  // 心灵根
+  method_heart_mirror: {
+    id: 'method_heart_mirror',
+    name: '心法·不动心镜篇',
+    type: 'method',
+    rarity: 'epic',
+    source: 'sect',
+    price: 35000,
+    qiSpeedBonus: 0.33,
+    requirement: {
+      type: 'rootAnyOf',
+      ids: ['heart']
+    },
+    desc: '心如明镜，照见万象而不留痕。限定心灵根者修炼，修炼速度 +33%。'
+  },
+
+  /* ======================
+   *  T4 自然战斗灵根 · 心法
+   * ====================== */
+
+  // 冰灵根
+  method_ice_frostheart: {
+    id: 'method_ice_frostheart',
+    name: '心法·寒魄凝霜章',
+    type: 'method',
+    rarity: 'rare',
+    source: 'sect',
+    price: 20000,
+    qiSpeedBonus: 0.28,
+    requirement: {
+      type: 'rootAnyOf',
+      ids: ['ice']
+    },
+    desc: '以心神为霜魄，令真气愈发清冷凝练。限定冰灵根者修炼，修炼速度 +28%。'
+  },
+
+  // 雷灵根
+  method_thunder_tempest: {
+    id: 'method_thunder_tempest',
+    name: '心法·雷动九霄卷',
+    type: 'method',
+    rarity: 'rare',
+    source: 'sect',
+    price: 20000,
+    qiSpeedBonus: 0.28,
+    requirement: {
+      type: 'rootAnyOf',
+      ids: ['thunder']
+    },
+    desc: '以雷意淬炼经脉，令真气奔涌如霹雳。限定雷灵根者修炼，修炼速度 +28%。'
+  },
+
+  /* ======================
+   *  T5 五行单灵根 · 心法
+   * ====================== */
+
+  // 金灵根
+  method_metal_edge: {
+    id: 'method_metal_edge',
+    name: '心法·金锋斩空诀',
+    type: 'method',
+    rarity: 'uncommon',
+    source: 'sect',
+    price: 12000,
+    qiSpeedBonus: 0.22,
+    requirement: {
+      type: 'rootAnyOf',
+      ids: ['metal']
+    },
+    desc: '以金性锋锐切削杂质，使真气精纯。限定金灵根者修炼，修炼速度 +22%。'
+  },
+
+  // 木灵根
+  method_wood_vitality: {
+    id: 'method_wood_vitality',
+    name: '心法·木生万象篇',
+    type: 'method',
+    rarity: 'uncommon',
+    source: 'sect',
+    price: 12000,
+    qiSpeedBonus: 0.22,
+    requirement: {
+      type: 'rootAnyOf',
+      ids: ['wood']
+    },
+    desc: '借木性生长之力，使真气源源不绝。限定木灵根者修炼，修炼速度 +22%。'
+  },
+
+  // 水灵根
+  method_water_stream: {
+    id: 'method_water_stream',
+    name: '心法·水转千流法',
+    type: 'method',
+    rarity: 'uncommon',
+    source: 'sect',
+    price: 12000,
+    qiSpeedBonus: 0.22,
+    requirement: {
+      type: 'rootAnyOf',
+      ids: ['water']
+    },
+    desc: '以水性圆融，引导真气在体内周天循环。限定水灵根者修炼，修炼速度 +22%。'
+  },
+
+  // 火灵根
+  method_fire_flame: {
+    id: 'method_fire_flame',
+    name: '心法·赤焰焚心诀',
+    type: 'method',
+    rarity: 'uncommon',
+    source: 'sect',
+    price: 12000,
+    qiSpeedBonus: 0.22,
+    requirement: {
+      type: 'rootAnyOf',
+      ids: ['fire']
+    },
+    desc: '以炽烈火焰焚尽杂念，真气随之旺盛。限定火灵根者修炼，修炼速度 +22%。'
+  },
+
+  // 土灵根
+  method_earth_barrier: {
+    id: 'method_earth_barrier',
+    name: '心法·厚土载元篇',
+    type: 'method',
+    rarity: 'uncommon',
+    source: 'sect',
+    price: 12000,
+    qiSpeedBonus: 0.22,
+    requirement: {
+      type: 'rootAnyOf',
+      ids: ['earth']
+    },
+    desc: '以厚土承载真元，使根基愈发稳固。限定土灵根者修炼，修炼速度 +22%。'
+  },
+
+  /* ======================
+   *  通用五行心法（已存在）
+   * ====================== */
+
+  // 任何拥有任意五行灵根者皆可修
+  method_five_cycle: {
+    id: 'method_five_cycle',
+    name: '心法·五行循环诀',
+    type: 'method',
+    rarity: 'rare',
+    source: 'sect',
+    price: 8000,
+    qiSpeedBonus: 0.2, // +20%
+    requirement: {
+      type: 'basicAny'
+    },
+    desc: '调和五行之气，使周身灵力循环不息。需具备任意五行灵根，修炼速度 +20%。'
+  },
+
+  /* ======================
+   *  仙法秘籍 · 示例
+   * ====================== */
+
+  // 仙法秘籍·次元裂斩（空间灵根专属，战斗中一次性爆发）
+  manual_dimensional_slash: {
+    id: 'manual_dimensional_slash',
+    name: '秘籍·次元裂斩',
+    type: 'manual',
+    rarity: 'mythic',
+    source: 'sectAndDrop',
+    price: 100000,
+    requirement: {
+      type: 'rootAnyOf',
+      ids: ['space']
+    },
+    battle: {
+      burstDimSlash: true
+    },
+    desc: '限定空间灵根者修炼。战斗中可在某一回合斩出次元裂缝，对敌人造成约 2000% 的普通攻击伤害。'
+  },
+
+  /* ======================
+   *  武技（原有示例保留）
+   * ====================== */
+
+  // 武技：基础快斩，可在市集购买或掉落，增加攻击与暴击率
+  tech_quick_strike: {
+    id: 'tech_quick_strike',
+    name: '武技·闪风快斩',
+    type: 'technique',
+    rarity: 'uncommon',
+    source: 'shopAndDrop',
+    price: 2500,
+    requirement: null,
+    battle: {
+      atkMul: 1.12,       // 攻击 +12%
+      critChance: 0.08    // 额外 8% 暴击率
+    },
+    desc: '简单实用的近身快斩武技，适合大多数近战修士。被动提升攻击与少量暴击率。'
+  },
+
+  // 武技：铁骨护身，可在市集购买或掉落，增加生命与减伤
+  tech_iron_body: {
+    id: 'tech_iron_body',
+    name: '武技·铁骨护身诀',
+    type: 'technique',
+    rarity: 'rare',
+    source: 'shopAndDrop',
+    price: 5000,
+    requirement: null,
+    battle: {
+      hpMul: 1.18,            // 生命 +18%
+      damageTakenMul: 0.92    // 受到伤害 -8%
+    },
+    desc: '锤炼肉身与根骨，使筋骨如钢铁般坚韧。被动提升生命上限并降低所受伤害。'
+  }
+};
+    
     /* ========== 功法状态 ========== */
 
     let learnedSkillIds = [];   // 已习得功法/秘籍/武技 id 列表
@@ -2935,3 +3227,4 @@ button:disabled {
   </script>
 </body>
 </html>
+
