@@ -2013,7 +2013,7 @@ const ALL_SKILLS = {
     // 修炼基础
     let baseQiPerSecond = 0.1;
     let realmQpsBonus = 0;
-    const caveQiPerBase = 0.2;
+    const caveQiPerBase = 5;
     let baseQiPerClick = 1.0;
 
     // 玩家 & 灵根
@@ -2045,9 +2045,30 @@ const ALL_SKILLS = {
 
     /* ========== 市集品质文本与价格 ========== */
 
-    const CAVE_QUALITY_NAMES = ['简陋洞府', '普通洞府', '上品洞府', '极品洞府', '仙品洞府'];
+    const CAVE_QUALITY_NAMES = [
+      '简陋洞府',
+      '破旧洞府',
+      '普通洞府',
+      '上品洞府',
+      '极品洞府',
+      '仙品洞府',
+      '灵泉洞府',
+      '灵脉洞府',
+      '聚灵洞府',
+      '洞天福地',
+      '小型洞天',
+      '大型洞天',
+      '小型仙府',
+      '中型仙府',
+      '大型仙府',
+      '上古洞府',
+      '太古洞府',
+      '鸿蒙洞府',
+      '混元洞府',
+      '永恒洞府'
+    ];
     const PILL_QUALITY_NAMES = ['凡品聚气散', '普通聚气散', '上品聚气散', '极品聚气散', '仙品聚气散'];
-    const MAX_CAVE_QUALITY = 5;
+    const MAX_CAVE_QUALITY = 20;
     const MAX_PILL_QUALITY = 5;
 
     const caveBaseStoneCost = 5;
@@ -2082,8 +2103,14 @@ const ALL_SKILLS = {
       return washPillBaseCost;
     }
 
+    function getCaveQualityMultiplier(q) {
+      // 洞府品质指数加成：每提升 1 档，系数 × 1.2
+      const lv = Math.max(0, (q || 1) - 1);
+      return Math.pow(1.2, lv);
+    }
+
     function getCaveQps() {
-      return caveCount * caveQiPerBase * (1 + 0.4 * (caveQuality - 1));
+      return caveCount * caveQiPerBase * getCaveQualityMultiplier(caveQuality);
     }
 
     function recalcDerivedStats() {
