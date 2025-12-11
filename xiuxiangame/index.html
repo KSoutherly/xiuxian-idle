@@ -892,6 +892,236 @@ button:disabled {
         desc: '稳固厚重，适合防御、岩盾、护体等路线。' }
     ];
 
+
+    // 灵根详细策划配置：用于描述战斗/生产/系统向定位
+    const LING_ROOTS_CONFIG = {
+      metal: {
+        id: 'metal',
+        name: '金灵根',
+        tierGroup: 'T5',
+        foundationRole: '攻伐之锐',
+        battle: '物理攻击、破甲、暴击提升，擅长快速击杀与破甲输出。',
+        production: '炼器专精：打造武器、防具时成功率与品质提升。',
+        systemTags: ['战斗：爆发输出', '生产：炼器']
+      },
+      wood: {
+        id: 'wood',
+        name: '木灵根',
+        tierGroup: 'T5',
+        foundationRole: '生机与恢复',
+        battle: '持续治疗、护盾、吸血类效果增强，适合拖长战斗。',
+        production: '灵植种植与药草培育效率提高，为炼丹提供大量原材料。',
+        systemTags: ['战斗：续航回复', '生产：种植/药田']
+      },
+      water: {
+        id: 'water',
+        name: '水灵根',
+        tierGroup: 'T5',
+        foundationRole: '流转与资源',
+        battle: '减速、流血、持续伤害等“消耗战”能力突出。',
+        production: '炼丹辅助：降低炼丹失败率，适合量产低中阶丹药。',
+        systemTags: ['战斗：消耗控场', '系统：挂机/掉落加成预留']
+      },
+      fire: {
+        id: 'fire',
+        name: '火灵根',
+        tierGroup: 'T5',
+        foundationRole: '爆发与危险',
+        battle: '高爆发范围伤害，清怪效率极高，但容易自伤或走火入魔。',
+        production: '高温相关的炼器、炼丹有额外火候掌控加成。',
+        systemTags: ['战斗：高爆AOE', '系统：心魔/风险玩法钩子']
+      },
+      earth: {
+        id: 'earth',
+        name: '土灵根',
+        tierGroup: 'T5',
+        foundationRole: '防御与稳固',
+        battle: '防御、减伤、格挡、反伤强化，适合作为前排肉盾。',
+        production: '采矿与挖宝收益提高，适合挖掘地底秘境与矿脉。',
+        systemTags: ['战斗：坦克/反伤', '系统：探索/矿藏']
+      },
+
+      ice: {
+        id: 'ice',
+        name: '冰灵根',
+        tierGroup: 'T4',
+        foundationRole: '控制专家',
+        battle: '冻结、减速、易伤等群体控制强势，适合高难秘境控场。',
+        production: '暂无专属生产加成，可与水/土系玩法联动。',
+        systemTags: ['战斗：强控/减速']
+      },
+      thunder: {
+        id: 'thunder',
+        name: '雷灵根',
+        tierGroup: 'T4',
+        foundationRole: '高速爆破',
+        battle: '攻速、连击、闪电链条伤害，清图与多目标作战强。',
+        production: '消耗品与符篆类道具可绑定“雷击”特效。',
+        systemTags: ['战斗：高频输出', '系统：高消耗高收益']
+      },
+      heart: {
+        id: 'heart',
+        name: '心灵根',
+        tierGroup: 'T3',
+        foundationRole: '悟性与心境',
+        battle: '心境类技能强化，对心魔、恐惧、混乱等状态更稳定。',
+        production: '心法经验与悟性加成，更易解锁新技能或隐藏技。',
+        systemTags: ['系统：悟性/天赋树', '事件：心魔/渡劫加成']
+      },
+      spirit: {
+        id: 'spirit',
+        name: '灵灵根',
+        tierGroup: 'T3',
+        foundationRole: '灵宠与自动化',
+        battle: '召唤灵宠、灵仆、傀儡流，偏多单位作战。',
+        production: '灵宠可代替玩家执行采集、种植等“自动化”任务。',
+        systemTags: ['战斗：召唤流', '系统：挂机/自动寻宝']
+      },
+      dream: {
+        id: 'dream',
+        name: '梦灵根',
+        tierGroup: 'T3',
+        foundationRole: '梦境与离线收益',
+        battle: '幻术、迷惑、降命中等虚实难辨的梦境系能力。',
+        production: '离线收益倍率提升，可开启“梦境秘境”（离线推进玩法）。',
+        systemTags: ['战斗：幻术/控制', '系统：离线收益']
+      },
+
+      dark: {
+        id: 'dark',
+        name: '暗灵根',
+        tierGroup: 'T2',
+        foundationRole: '高风险高收益',
+        battle: '残血增伤、暗属性真伤等，越危急越强。',
+        production: '适合炼制禁药、邪器等高风险产物。',
+        systemTags: ['战斗：搏命流', '系统：堕落/理性值玩法']
+      },
+      light: {
+        id: 'light',
+        name: '光灵根',
+        tierGroup: 'T2',
+        foundationRole: '保命与解厄',
+        battle: '护盾、净化、复活、团队增益，为强力辅助向灵根。',
+        production: '与“保底”“幸运”类机制绑定，降低失败惩罚。',
+        systemTags: ['战斗：奶/保护', '系统：保底/解厄']
+      },
+      realm: {
+        id: 'realm',
+        name: '界灵根',
+        tierGroup: 'T2',
+        foundationRole: '秘境与地图支配',
+        battle: '在秘境内获得领域加成，可改变地形与战场规则。',
+        production: '秘境资源采集加成，是探险家与开图党的最爱。',
+        systemTags: ['系统：地图/秘境/领域']
+      },
+      holy: {
+        id: 'holy',
+        name: '圣灵根',
+        tierGroup: 'T2',
+        foundationRole: '气运与庇护',
+        battle: '减弱天劫、心魔等惩罚，辅助与庇护型能力突出。',
+        production: '奇遇、任务品质、NPC好感等事件权重提升。',
+        systemTags: ['系统：气运/奇遇', '事件：渡劫减伤']
+      },
+
+      space: {
+        id: 'space',
+        name: '空间灵根',
+        tierGroup: 'T1',
+        foundationRole: '位置与格局',
+        battle: '瞬移、位移、闪避与拉扯，极擅长走位与风筝。',
+        production: '背包格子、仓库、灵宠栏等“空间位”上限提升。',
+        systemTags: ['战斗：位移/闪避', '系统：格子/额外槽位']
+      },
+      time: {
+        id: 'time',
+        name: '时间灵根',
+        tierGroup: 'T1',
+        foundationRole: '加速与压缩',
+        battle: '缩短冷却、加快持续伤害/治疗Tick，时间减速控制。',
+        production: '修炼、炼丹、建造等耗时行为整体加速，但资源消耗也更快。',
+        systemTags: ['系统：全局加速', '战斗：冷却缩减']
+      },
+      cause: {
+        id: 'cause',
+        name: '因果灵根',
+        tierGroup: 'T1',
+        foundationRole: '轮回与逆天改命',
+        battle: '前期数值平平，中后期与轮回/因果点系统深度绑定。',
+        production: '可重置灵根、功法、天赋以“洗牌”，保留因果加成。',
+        systemTags: ['系统：轮回/洗练/终局成长']
+      }
+    };
+
+
+    // 五行基础双灵根的专属组合效果描述
+    const DUAL_BASIC_RELATIONS = {
+      'metal-wood': {
+        title: '金木同修',
+        type: 'clash',
+        keywords: ['攻伐', '续航', '反奶'],
+        desc: '强化对回复型与拖延型敌人的克制，兼具高输出与一定续航。'
+      },
+      'metal-water': {
+        title: '金水生财',
+        type: 'synergy',
+        keywords: ['输出', '掉落', '炼丹稳'],
+        desc: '战斗掉落与灵石收益提升，更适合“打怪发家”的刷图流派。'
+      },
+      'metal-fire': {
+        title: '烈金破军',
+        type: 'clash',
+        keywords: ['极限爆发', '玻璃大炮'],
+        desc: '大幅提升瞬间爆发与暴击上限，但受到伤害与入魔风险也显著提高。'
+      },
+      'metal-earth': {
+        title: '金土铜墙',
+        type: 'synergy',
+        keywords: ['半坦半C', '反伤', '破甲'],
+        desc: '在高防御基础上保留可观输出，适合站桩搏杀与反伤流。'
+      },
+
+      'wood-water': {
+        title: '木水长流',
+        type: 'synergy',
+        keywords: ['回复', '持续伤', '经济'],
+        desc: '持续治疗与消耗战能力大幅增强，挂机与长线战斗体验更稳定。'
+      },
+      'wood-fire': {
+        title: '木火焚生',
+        type: 'synergy',
+        keywords: ['持续输出', '护盾', '爆发平衡'],
+        desc: '在较高爆发的同时保留可观自回复，适合长时间连战。'
+      },
+      'wood-earth': {
+        title: '木土坚城',
+        type: 'clash',
+        keywords: ['肉队核心', '护盾', '减伤'],
+        desc: '极强的生存与团队保护能力，适合作为前排与治疗一体型定位。'
+      },
+
+      'water-fire': {
+        title: '水火并行',
+        type: 'clash',
+        keywords: ['控爆平衡', '反爆发'],
+        desc: '兼具消耗与爆发，对纯火爆发流有额外减压效果，容错率较高。'
+      },
+      'water-earth': {
+        title: '水土固守',
+        type: 'clash',
+        keywords: ['消耗战', '抗控', '稳健'],
+        desc: '极强的消耗战与解控能力，适合打持久战与高难 Boss。'
+      },
+
+      'earth-fire': {
+        title: '火土炼狱',
+        type: 'synergy',
+        keywords: ['坦爆流', '反伤', '高风险'],
+        desc: '以高防御与反伤承载火系爆发，形成“坦克自燃”式极限搏杀流派。'
+      }
+    };
+
+
     const LING_TIER_META = {
       none:       { label: '无灵根加成',         qiMult: 1.0,  abilityMult: 1.0, eventMult: 1.0 },
       T1:         { label: 'T1 超限灵根',       qiMult: 3.0,  abilityMult: 2.5, eventMult: 2.5 },
@@ -906,11 +1136,27 @@ button:disabled {
     function getSpecialRoots(){ return LING_ROOTS.filter(r => r.type === 'special'); }
 
     function getDualBasicRelation(roots) {
-      if (!roots || roots.length !== 2) return { type: 'neutral', label: 'T5 双灵根', descExtra: '' };
+      if (!roots || roots.length !== 2) {
+        return { type: 'neutral', label: 'T5 双灵根', descExtra: '' };
+      }
       const [r1, r2] = roots;
-      if (r1.type !== 'basic' || r2.type !== 'basic') return { type: 'neutral', label: 'T5 双灵根', descExtra: '' };
-      const a = r1.id, b = r2.id;
+      if (r1.type !== 'basic' || r2.type !== 'basic') {
+        return { type: 'neutral', label: 'T5 双灵根', descExtra: '' };
+      }
 
+      // 先尝试从五行双灵根专属表中读取
+      const key = [r1.id, r2.id].sort().join('-');
+      const relCfg = typeof DUAL_BASIC_RELATIONS !== 'undefined' ? DUAL_BASIC_RELATIONS[key] : null;
+      if (relCfg) {
+        return {
+          type: relCfg.type || 'neutral',
+          label: relCfg.title || 'T5 双灵根',
+          descExtra: relCfg.desc || ''
+        };
+      }
+
+      // 若未在专属表中找到，则退回到默认的“相生/相克/中性”规则
+      const a = r1.id, b = r2.id;
       function match(p1, p2) {
         return (a === p1 && b === p2) || (a === p2 && b === p1);
       }
@@ -921,7 +1167,7 @@ button:disabled {
         return {
           type: 'synergy',
           label: 'T4.5 相生双灵根',
-          descExtra: '两种五行相生，火涨木势，木祝火威，使得能力点获取略有提升。'
+          descExtra: '两种五行相生，修行更顺畅，能力点与成长效率略有提升。'
         };
       }
       // 相克：金木，木土，土水，水火，火金
@@ -933,8 +1179,13 @@ button:disabled {
           descExtra: '两种五行相克，修行路上波澜不断，却更容易激发命运波动与奇遇。'
         };
       }
-      return { type: 'neutral', label: 'T5 双灵根', descExtra: '两种五行并存，既有多样变化，也需谨慎调和。' };
+      return {
+        type: 'neutral',
+        label: 'T5 双灵根',
+        descExtra: '两种五行并存，既有多样变化，也需谨慎调和。'
+      };
     }
+
 
     function getLingRootTierMeta() {
       if (!lingRoots || lingRoots.length === 0) return LING_TIER_META.none;
@@ -3467,17 +3718,24 @@ const ALL_SKILLS = {
       lingRoots = tempLingRoots;
       const meta = getLingRootTierMeta();
       lingRoots = old;
-      if (rootResultTierSpan) rootResultTierSpan.textContent = meta.label;
 
+      let tierLabelText = meta.label;
       let desc = '';
+
       if (tempLingRoots.length === 2 && tempLingRoots.every(r => r.type === 'basic')) {
         const rel = getDualBasicRelation(tempLingRoots);
+        if (rel && rel.label) {
+          tierLabelText = `${meta.label} · ${rel.label}`;
+        }
         desc = `${tempLingRoots[0].name} 与 ${tempLingRoots[1].name} 并存。${rel.descExtra || ''}`;
       } else {
         desc = tempLingRoots.map(r => r.desc).join(' / ');
       }
+
+      if (rootResultTierSpan) rootResultTierSpan.textContent = tierLabelText;
       if (rootResultDescDiv) rootResultDescDiv.textContent = desc;
     }
+
 
     startGameBtn.addEventListener('click', () => {
       let name = playerNameInput.value.trim();
@@ -3573,4 +3831,6 @@ const ALL_SKILLS = {
   </script>
 </body>
 </html>
+
+
 
