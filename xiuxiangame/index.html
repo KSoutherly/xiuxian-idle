@@ -226,16 +226,38 @@ button:disabled {
 }
 
 /* 游历日志 */
-#battleLog {
+.battle-log-wrapper {
   margin-top: 8px;
+  position: relative;
+}
+
+#battleLog {
   max-height: 220px;
   overflow-y: auto;
   font-size: 12px;
   line-height: 1.5;
   background: rgba(5, 8, 20, 0.85);
-  padding: 8px 10px;
+  padding: 8px 10px 26px 10px; /* 底部预留空间给倍速按钮 */
   border-radius: 10px;
   border: 1px solid rgba(120, 150, 255, 0.3);
+}
+
+.battle-speed-btn {
+  position: absolute;
+  right: 8px;
+  bottom: 6px;
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: none;
+  cursor: pointer;
+  background: rgba(120, 150, 255, 0.9);
+  color: #05060a;
+  box-shadow: 0 0 6px rgba(0, 0, 0, 0.4);
+}
+
+.battle-speed-btn:hover {
+  opacity: 0.9;
 }
 
 /* 底部导航 */
@@ -877,7 +899,10 @@ button:disabled {
           </div>
           <button id="startBattleBtn" class="btn-main">开始游历试炼</button>
           <div id="battleResult" class="hint"></div>
-          <div id="battleLog"></div>
+          <div class="battle-log-wrapper">
+            <div id="battleLog"></div>
+            <button id="battleSpeedBtn" class="battle-speed-btn">x1</button>
+          </div>
         </div>
       </div>
 
@@ -2039,7 +2064,8 @@ const ALL_SKILLS = {
     // 游历（战斗）状态
     let currentBattle = null;
     let battleTimerId = null;
-    const BATTLE_TURN_DELAY = 300;
+    const BATTLE_BASE_DELAY = 700; // 基础回合间隔（毫秒），默认比之前稍慢一些
+    let battleSpeed = 1; // 战斗倍速：1x / 2x / 3x / 4x
     const MAX_TURNS = 20;
     let currentMapId = 'map_0';
 
@@ -2362,7 +2388,8 @@ const ALL_SKILLS = {
     const mapSelect = document.getElementById('mapSelect');
     const startBattleBtn = document.getElementById('startBattleBtn');
     const battleResultDiv = document.getElementById('battleResult');
-       const battleLogDiv = document.getElementById('battleLog');
+    const battleLogDiv = document.getElementById('battleLog');
+    const battleSpeedBtn = document.getElementById('battleSpeedBtn');
     const autoBattleToggle = document.getElementById('autoBattleToggle');
 
     const battleResultOverlay = document.getElementById('battleResultOverlay');
@@ -3576,6 +3603,12 @@ const ALL_SKILLS = {
       }
     }
 
+    function getBattleInterval() {
+      const speed = battleSpeed || 1;
+      // 倍速越高，间隔越短，最低不低于 120ms
+      return Math.max(120, Math.floor(BATTLE_BASE_DELAY / speed));
+    }
+
     function runBattleTurn() {
       if (!currentBattle) {
         clearInterval(battleTimerId);
@@ -3740,7 +3773,7 @@ const ALL_SKILLS = {
       }
 
       startBattleBtn.disabled = true;
-      battleTimerId = setInterval(runBattleTurn, BATTLE_TURN_DELAY);
+      battleTimerId = setInterval(runBattleTurn, getBattleInterval());
     }
 
     // 自动战斗：在满足条件时自动开一局
@@ -3794,6 +3827,29 @@ const ALL_SKILLS = {
         maybeStartAutoBattle();
       }
     });
+    if (battleSpeedBtn) {
+      const speedSteps = [0.5, 0.75, 1, 2, 3, 4];
+      // 初始化按钮文本与当前倍速
+      if (!battleSpeed || battleSpeed <= 0) {
+        battleSpeed = 1;
+      }
+      battleSpeedBtn.textContent = 'x' + battleSpeed;
+
+      battleSpeedBtn.addEventListener('click', () => {
+        let idx = speedSteps.indexOf(battleSpeed);
+        if (idx === -1) idx = 2; // 默认指向 1x
+        idx = (idx + 1) % speedSteps.length;
+        battleSpeed = speedSteps[idx];
+        battleSpeedBtn.textContent = 'x' + battleSpeed;
+
+        // 若战斗正在进行，则根据新的倍速重启计时器
+        if (currentBattle && battleTimerId) {
+          clearInterval(battleTimerId);
+          battleTimerId = setInterval(runBattleTurn, getBattleInterval());
+        }
+      });
+    }
+
 
     cultivateBtn.addEventListener('click', () => {
       gainQi(qiPerClick, 'click');
