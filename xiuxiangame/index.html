@@ -1054,70 +1054,47 @@ button:disabled {
     };
 
 
-    // 五行基础双灵根的专属组合效果描述
+    // 五行双灵根组合效果（仅用于展示名称与说明，数值加成由 getLingRootTierMeta 控制）
     const DUAL_BASIC_RELATIONS = {
       'metal-wood': {
         title: '金木同修',
-        type: 'clash',
-        keywords: ['攻伐', '续航', '反奶'],
-        desc: '强化对回复型与拖延型敌人的克制，兼具高输出与一定续航。'
+        desc: '金属之锐与木之生长并存，适合走攻守兼备路线，前期输出顺滑，中后期成长稳定。'
       },
       'metal-water': {
-        title: '金水生财',
-        type: 'synergy',
-        keywords: ['输出', '掉落', '炼丹稳'],
-        desc: '战斗掉落与灵石收益提升，更适合“打怪发家”的刷图流派。'
+        title: '金水猎锋',
+        desc: '金主杀伐，水主资源，既能打击敌人，又偏向掉落与资源获取，是“打工修仙”的常见体质。'
       },
       'metal-fire': {
-        title: '烈金破军',
-        type: 'clash',
-        keywords: ['极限爆发', '玻璃大炮'],
-        desc: '大幅提升瞬间爆发与暴击上限，但受到伤害与入魔风险也显著提高。'
+        title: '炎金炼狱',
+        desc: '锋刃叠火，爆发极高，但修行路上更容易走火入魔，适合追求极致输出的疯批剑修。'
       },
       'metal-earth': {
-        title: '金土铜墙',
-        type: 'synergy',
-        keywords: ['半坦半C', '反伤', '破甲'],
-        desc: '在高防御基础上保留可观输出，适合站桩搏杀与反伤流。'
+        title: '山岳金刚',
+        desc: '土之稳固托举金之攻击，攻防兼备，适合前排、坦刀流修士，战力扎实。'
       },
-
       'wood-water': {
-        title: '木水长流',
-        type: 'synergy',
-        keywords: ['回复', '持续伤', '经济'],
-        desc: '持续治疗与消耗战能力大幅增强，挂机与长线战斗体验更稳定。'
+        title: '灵木甘泉',
+        desc: '木主生机，水主滋养，回复与续航能力极佳，适合医生、辅助、长线养成流。'
       },
       'wood-fire': {
-        title: '木火焚生',
-        type: 'synergy',
-        keywords: ['持续输出', '护盾', '爆发平衡'],
-        desc: '在较高爆发的同时保留可观自回复，适合长时间连战。'
+        title: '焚林燃木',
+        desc: '木为薪柴，火借木势，爆发与范围伤害都强力，但资源消耗偏高，对玩家操作与规划要求更高。'
       },
       'wood-earth': {
-        title: '木土坚城',
-        type: 'clash',
-        keywords: ['肉队核心', '护盾', '减伤'],
-        desc: '极强的生存与团队保护能力，适合作为前排与治疗一体型定位。'
+        title: '青藤固岭',
+        desc: '木土并生，如藤缠山，偏向控制与防守，适合阵地战、守点类玩法。'
       },
-
       'water-fire': {
-        title: '水火并行',
-        type: 'clash',
-        keywords: ['控爆平衡', '反爆发'],
-        desc: '兼具消耗与爆发，对纯火爆发流有额外减压效果，容错率较高。'
+        title: '寒炎相济',
+        desc: '冷热交替，攻守一体，既能打输出又能控场，操作上更考验节奏感。'
       },
       'water-earth': {
-        title: '水土固守',
-        type: 'clash',
-        keywords: ['消耗战', '抗控', '稳健'],
-        desc: '极强的消耗战与解控能力，适合打持久战与高难 Boss。'
+        title: '沼泽矿脉',
+        desc: '水润土、土载水，偏向减速、束缚与资源搜集，在探索与挖宝玩法中表现突出。'
       },
-
-      'earth-fire': {
-        title: '火土炼狱',
-        type: 'synergy',
-        keywords: ['坦爆流', '反伤', '高风险'],
-        desc: '以高防御与反伤承载火系爆发，形成“坦克自燃”式极限搏杀流派。'
+      'fire-earth': {
+        title: '熔岩壁垒',
+        desc: '火炼土成岩，攻防一体，适合站桩输出与反击流派，在高压战斗中尤为稳定。'
       }
     };
 
@@ -1137,55 +1114,50 @@ button:disabled {
 
     function getDualBasicRelation(roots) {
       if (!roots || roots.length !== 2) {
-        return { type: 'neutral', label: 'T5 双灵根', descExtra: '' };
+        return { type: 'neutral', label: 'T5 双灵根', descExtra: '', comboName: '' };
       }
       const [r1, r2] = roots;
       if (r1.type !== 'basic' || r2.type !== 'basic') {
-        return { type: 'neutral', label: 'T5 双灵根', descExtra: '' };
+        return { type: 'neutral', label: 'T5 双灵根', descExtra: '', comboName: '' };
       }
-
-      // 先尝试从五行双灵根专属表中读取
-      const key = [r1.id, r2.id].sort().join('-');
-      const relCfg = typeof DUAL_BASIC_RELATIONS !== 'undefined' ? DUAL_BASIC_RELATIONS[key] : null;
-      if (relCfg) {
-        return {
-          type: relCfg.type || 'neutral',
-          label: relCfg.title || 'T5 双灵根',
-          descExtra: relCfg.desc || ''
-        };
-      }
-
-      // 若未在专属表中找到，则退回到默认的“相生/相克/中性”规则
       const a = r1.id, b = r2.id;
+
       function match(p1, p2) {
         return (a === p1 && b === p2) || (a === p2 && b === p1);
       }
 
+      let relType = 'neutral';
+      let label = 'T5 双灵根';
+      let descExtra = '两种五行并存，既有多样变化，也需谨慎调和。';
+
       // 相生：木火、火土、土金、金水、水木
       if (match('wood', 'fire') || match('fire', 'earth') || match('earth', 'metal')
         || match('metal', 'water') || match('water', 'wood')) {
-        return {
-          type: 'synergy',
-          label: 'T4.5 相生双灵根',
-          descExtra: '两种五行相生，修行更顺畅，能力点与成长效率略有提升。'
-        };
+        relType = 'synergy';
+        label = 'T4.5 相生双灵根';
+        descExtra = '两种五行相生，修行路途更顺滑，能力点获取略有提升。';
       }
       // 相克：金木，木土，土水，水火，火金
-      if (match('metal', 'wood') || match('wood', 'earth') || match('earth', 'water')
+      else if (match('metal', 'wood') || match('wood', 'earth') || match('earth', 'water')
         || match('water', 'fire') || match('fire', 'metal')) {
-        return {
-          type: 'clash',
-          label: 'T5 相克双灵根',
-          descExtra: '两种五行相克，修行路上波澜不断，却更容易激发命运波动与奇遇。'
-        };
+        relType = 'clash';
+        label = 'T5 相克双灵根';
+        descExtra = '两种五行相克，修行路上波澜不断，却更容易激发命运波动与奇遇。';
       }
-      return {
-        type: 'neutral',
-        label: 'T5 双灵根',
-        descExtra: '两种五行并存，既有多样变化，也需谨慎调和。'
-      };
-    }
 
+      // 查找预设的组合名称与更细节的说明
+      let comboName = '';
+      if (typeof DUAL_BASIC_RELATIONS !== 'undefined' && DUAL_BASIC_RELATIONS) {
+        const key = [a, b].sort().join('-');
+        const cfg = DUAL_BASIC_RELATIONS[key];
+        if (cfg) {
+          if (cfg.title) comboName = cfg.title;
+          if (cfg.desc) descExtra = cfg.desc;
+        }
+      }
+
+      return { type: relType, label, descExtra, comboName };
+    }
 
     function getLingRootTierMeta() {
       if (!lingRoots || lingRoots.length === 0) return LING_TIER_META.none;
@@ -2222,17 +2194,30 @@ const ALL_SKILLS = {
       if (lingRoots.length === 2 && lingRoots.every(r => r.type === 'basic')) {
         const [r1, r2] = lingRoots;
         const rel = getDualBasicRelation(lingRoots);
+        const cfg1 = LING_ROOTS_CONFIG && LING_ROOTS_CONFIG[r1.id];
+        const cfg2 = LING_ROOTS_CONFIG && LING_ROOTS_CONFIG[r2.id];
 
         const row1 = document.createElement('div');
         row1.className = 'ling-root-row';
-        row1.innerHTML = `<span>${r1.short}${r2.short}双灵根</span><span>层级：${rel.label}</span>`;
+        const comboLabel = rel && rel.comboName ? `${rel.label} · ${rel.comboName}` : rel.label;
+        row1.innerHTML = `<span>${r1.short}${r2.short}双灵根</span><span>层级：${comboLabel}</span>`;
         lingRootTableDiv.appendChild(row1);
 
         const row2 = document.createElement('div');
         row2.className = 'ling-root-row';
         row2.innerHTML =
-          `<span>能力倾向：</span><span>${r1.name} 与 ${r2.name} 并存。${rel.descExtra}</span>`;
+          `<span>能力倾向：</span><span>${r1.name} 与 ${r2.name} 并存。${rel.descExtra || ''}</span>`;
         lingRootTableDiv.appendChild(row2);
+
+        if (cfg1 || cfg2) {
+          const row3 = document.createElement('div');
+          row3.className = 'ling-root-row';
+          const parts = [];
+          if (cfg1) parts.push(`${cfg1.name}：${cfg1.foundationRole}`);
+          if (cfg2) parts.push(`${cfg2.name}：${cfg2.foundationRole}`);
+          row3.innerHTML = `<span>基础定位：</span><span>${parts.join('；')}</span>`;
+          lingRootTableDiv.appendChild(row3);
+        }
       } else {
         // 单灵根 / 稀有灵根
         lingRoots.forEach(r => {
@@ -2244,14 +2229,26 @@ const ALL_SKILLS = {
 
           const row2 = document.createElement('div');
           row2.className = 'ling-root-row';
-          row2.innerHTML = `<span>能力倾向：</span><span>${r.desc}</span>`;
+          const cfg = LING_ROOTS_CONFIG && LING_ROOTS_CONFIG[r.id];
+          if (cfg) {
+            const detailText =
+              `${cfg.foundationRole}。战斗：${cfg.battle}；生产/系统：${cfg.production}`;
+            row2.innerHTML = `<span>能力倾向：</span><span>${detailText}</span>`;
+          } else {
+            row2.innerHTML = `<span>能力倾向：</span><span>${r.desc}</span>`;
+          }
           lingRootTableDiv.appendChild(row2);
         });
       }
 
       const extra = document.createElement('div');
       extra.className = 'ling-root-row';
-      extra.innerHTML = `<span>系统加成：</span><span>${getLingRootTierMeta().label}</span>`;
+      const meta2 = getLingRootTierMeta();
+      const qi2 = ((meta2.qiMult - 1) * 100).toFixed(0);
+      const ab2 = ((meta2.abilityMult - 1) * 100).toFixed(0);
+      const ev2 = ((meta2.eventMult - 1) * 100).toFixed(0);
+      extra.innerHTML =
+        `<span>系统加成：</span><span>${meta2.label}（修炼速度 ${fmt(qi2)} · 能力点 ${fmt(ab2)} · 奇遇权重 ${fmt(ev2)}）</span>`;
       lingRootTableDiv.appendChild(extra);
     }
 
@@ -3719,23 +3716,22 @@ const ALL_SKILLS = {
       const meta = getLingRootTierMeta();
       lingRoots = old;
 
-      let tierLabelText = meta.label;
+      let tierText = meta.label;
       let desc = '';
 
       if (tempLingRoots.length === 2 && tempLingRoots.every(r => r.type === 'basic')) {
         const rel = getDualBasicRelation(tempLingRoots);
-        if (rel && rel.label) {
-          tierLabelText = `${meta.label} · ${rel.label}`;
+        if (rel && rel.comboName) {
+          tierText = `${meta.label} · ${rel.comboName}`;
         }
         desc = `${tempLingRoots[0].name} 与 ${tempLingRoots[1].name} 并存。${rel.descExtra || ''}`;
       } else {
         desc = tempLingRoots.map(r => r.desc).join(' / ');
       }
 
-      if (rootResultTierSpan) rootResultTierSpan.textContent = tierLabelText;
+      if (rootResultTierSpan) rootResultTierSpan.textContent = tierText;
       if (rootResultDescDiv) rootResultDescDiv.textContent = desc;
     }
-
 
     startGameBtn.addEventListener('click', () => {
       let name = playerNameInput.value.trim();
