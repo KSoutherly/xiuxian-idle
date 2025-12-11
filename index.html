@@ -898,7 +898,7 @@ button:disabled {
           <div class="upgrade">
             <div class="upgrade-info">
               购买一枚洗髓丹，立即弹出灵根转盘，随机生成一组新的灵根。<br>
-              价格：<span id="washPillCost">0</span> 灵石
+              价格：<span id="washPillCost">200</span> 灵石
             </div>
             <button id="buyWashPillBtn">购买洗髓丹（重塑灵根）</button>
           </div>
@@ -2009,7 +2009,7 @@ const ALL_SKILLS = {
     const pillBaseStoneCost = 4;
     const caveUpgradeBaseCost = 20;
     const pillUpgradeBaseCost = 15;
-    const washPillBaseCost = 0; // 洗髓丹基础价格（当前为测试：0 灵石）
+    const washPillBaseCost = 200; // 洗髓丹基础价格（当前为测试：0 灵石）
 
     function getCaveQualityName() {
       const idx = Math.min(caveQuality - 1, CAVE_QUALITY_NAMES.length - 1);
@@ -4149,6 +4149,7 @@ const ALL_SKILLS = {
   </script>
 </body>
 </html>
+
 
 
 
