@@ -192,6 +192,27 @@ button:disabled {
   background: linear-gradient(120deg, #5ac8fa, #007aff);
 }
 
+.stat-custom-input {
+  width: 52px;
+  padding: 2px 4px;
+  font-size: 11px;
+  border-radius: 6px;
+  border: 1px solid rgba(90, 200, 250, 0.6);
+  background: rgba(5, 8, 20, 0.9);
+  color: #f3f3f3;
+  outline: none;
+}
+
+.stat-custom-input::-webkit-outer-spin-button,
+.stat-custom-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.stat-custom-input[type="number"] {
+  -moz-appearance: textfield;
+}
+
 /* 灵根说明表 */
 .ling-root-table {
   font-size: 13px;
@@ -751,42 +772,66 @@ button:disabled {
               <span>力量（攻击伤害）</span>
               <span class="stat-right">
                 <span id="statPower">0</span>
-                <button class="btn-plus" data-stat="power">+</button>
+                <button class="btn-plus" data-stat="power" data-amount="1">+1</button>
+                <button class="btn-plus" data-stat="power" data-amount="10">+10</button>
+                <button class="btn-plus" data-stat="power" data-amount="100">+100</button>
+                <input type="number" class="stat-custom-input" data-stat="power" min="1" placeholder="自定义">
+                <button class="btn-plus" data-stat="power" data-amount="custom">应用</button>
               </span>
             </div>
             <div class="stat-row">
               <span>体质（生命、防御）</span>
               <span class="stat-right">
                 <span id="statPhysique">0</span>
-                <button class="btn-plus" data-stat="physique">+</button>
+                <button class="btn-plus" data-stat="physique" data-amount="1">+1</button>
+                <button class="btn-plus" data-stat="physique" data-amount="10">+10</button>
+                <button class="btn-plus" data-stat="physique" data-amount="100">+100</button>
+                <input type="number" class="stat-custom-input" data-stat="physique" min="1" placeholder="自定义">
+                <button class="btn-plus" data-stat="physique" data-amount="custom">应用</button>
               </span>
             </div>
             <div class="stat-row">
               <span>身法（闪避、速度）</span>
               <span class="stat-right">
                 <span id="statAgility">0</span>
-                <button class="btn-plus" data-stat="agility">+</button>
+                <button class="btn-plus" data-stat="agility" data-amount="1">+1</button>
+                <button class="btn-plus" data-stat="agility" data-amount="10">+10</button>
+                <button class="btn-plus" data-stat="agility" data-amount="100">+100</button>
+                <input type="number" class="stat-custom-input" data-stat="agility" min="1" placeholder="自定义">
+                <button class="btn-plus" data-stat="agility" data-amount="custom">应用</button>
               </span>
             </div>
             <div class="stat-row">
               <span>神识（蓝量、精神）</span>
               <span class="stat-right">
                 <span id="statSpirit">0</span>
-                <button class="btn-plus" data-stat="spirit">+</button>
+                <button class="btn-plus" data-stat="spirit" data-amount="1">+1</button>
+                <button class="btn-plus" data-stat="spirit" data-amount="10">+10</button>
+                <button class="btn-plus" data-stat="spirit" data-amount="100">+100</button>
+                <input type="number" class="stat-custom-input" data-stat="spirit" min="1" placeholder="自定义">
+                <button class="btn-plus" data-stat="spirit" data-amount="custom">应用</button>
               </span>
             </div>
             <div class="stat-row">
               <span>根骨（体魄、韧性）</span>
               <span class="stat-right">
                 <span id="statRoot">0</span>
-                <button class="btn-plus" data-stat="root">+</button>
+                <button class="btn-plus" data-stat="root" data-amount="1">+1</button>
+                <button class="btn-plus" data-stat="root" data-amount="10">+10</button>
+                <button class="btn-plus" data-stat="root" data-amount="100">+100</button>
+                <input type="number" class="stat-custom-input" data-stat="root" min="1" placeholder="自定义">
+                <button class="btn-plus" data-stat="root" data-amount="custom">应用</button>
               </span>
             </div>
             <div class="stat-row">
               <span>气运（机缘、掉落）</span>
               <span class="stat-right">
                 <span id="statLuck">0</span>
-                <button class="btn-plus" data-stat="luck">+</button>
+                <button class="btn-plus" data-stat="luck" data-amount="1">+1</button>
+                <button class="btn-plus" data-stat="luck" data-amount="10">+10</button>
+                <button class="btn-plus" data-stat="luck" data-amount="100">+100</button>
+                <input type="number" class="stat-custom-input" data-stat="luck" min="1" placeholder="自定义">
+                <button class="btn-plus" data-stat="luck" data-amount="custom">应用</button>
               </span>
             </div>
           </div>
@@ -893,12 +938,12 @@ button:disabled {
         <div class="panel">
           <h2>灵石市集 · 洗髓丹</h2>
           <div class="hint">
-            洗髓丹可以重塑灵根，仅对已经觉醒灵根的修士有效。
+            洗髓丹可以重塑灵根，仅对已经觉醒灵根的修士有效。当前为测试阶段，价格为 0 灵石。
           </div>
           <div class="upgrade">
             <div class="upgrade-info">
               购买一枚洗髓丹，立即弹出灵根转盘，随机生成一组新的灵根。<br>
-              价格：<span id="washPillCost">200</span> 灵石
+              价格：<span id="washPillCost">0</span> 灵石
             </div>
             <button id="buyWashPillBtn">购买洗髓丹（重塑灵根）</button>
           </div>
@@ -2009,7 +2054,7 @@ const ALL_SKILLS = {
     const pillBaseStoneCost = 4;
     const caveUpgradeBaseCost = 20;
     const pillUpgradeBaseCost = 15;
-    const washPillBaseCost = 200; // 洗髓丹基础价格（当前为测试：0 灵石）
+    const washPillBaseCost = 0; // 洗髓丹基础价格（当前为测试：0 灵石）
 
     function getCaveQualityName() {
       const idx = Math.min(caveQuality - 1, CAVE_QUALITY_NAMES.length - 1);
@@ -3794,11 +3839,32 @@ const ALL_SKILLS = {
       btn.addEventListener('click', () => {
         if (!gameStarted) return;
         const key = btn.dataset.stat;
-        if (abilityPoints > 0 && stats[key] != null) {
-          abilityPoints--;
-          stats[key] += 1;
-          updateUI();
+        if (!stats || stats[key] == null) return;
+        if (abilityPoints <= 0) return;
+
+        let amount = 1;
+        const amountAttr = btn.dataset.amount;
+
+        if (amountAttr === 'custom') {
+          const input = document.querySelector('.stat-custom-input[data-stat="' + key + '"]');
+          if (!input) return;
+          const val = parseInt(input.value, 10);
+          if (!Number.isFinite(val) || val <= 0) {
+            alert('请输入一个大于 0 的整数。');
+            return;
+          }
+          amount = val;
+        } else {
+          const parsed = parseInt(amountAttr || '1', 10);
+          amount = Number.isFinite(parsed) && parsed > 0 ? parsed : 1;
         }
+
+        const usePoints = Math.min(amount, abilityPoints);
+        if (usePoints <= 0) return;
+
+        abilityPoints -= usePoints;
+        stats[key] += usePoints;
+        updateUI();
       });
     });
 
@@ -4149,9 +4215,6 @@ const ALL_SKILLS = {
   </script>
 </body>
 </html>
-
-
-
 
 
 
