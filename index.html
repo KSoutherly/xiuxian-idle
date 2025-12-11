@@ -391,7 +391,135 @@ button:disabled {
     max-width: 620px;
   }
 }
-  </style>
+  
+/* ====== 开局灵根抽取转盘 & 高光颜色 ====== */
+
+.root-draw-panel {
+  margin: 32px auto 12px;
+  max-width: 420px;
+}
+
+.root-draw-subtitle {
+  font-size: 13px;
+  color: #c0c6ff;
+  margin-bottom: 4px;
+}
+
+.root-wheel-wrapper {
+  display: flex;
+  justify-content: center;
+  margin: 10px 0;
+}
+
+.root-wheel {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.25);
+  box-shadow: 0 0 12px rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  font-size: 13px;
+}
+
+.root-wheel-name {
+  padding: 4px 6px;
+}
+
+.root-result {
+  font-size: 13px;
+  margin-top: 6px;
+}
+
+.root-result-tier {
+  margin-top: 2px;
+}
+
+.root-result-desc {
+  margin-top: 4px;
+  color: #c0c6ff;
+}
+
+.root-draw-controls {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.root-draw-controls button {
+  flex: 1;
+}
+
+.root-confirm-row {
+  margin-top: 10px;
+  text-align: center;
+}
+
+.root-warning {
+  margin-top: 8px;
+  font-size: 12px;
+  color: #ffdd9b;
+}
+
+.spirit-root-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: rgba(10, 16, 40, 0.9);
+  font-weight: 600;
+  font-size: 13px;
+}
+
+/* 灵根高光颜色（仅用于文字） */
+.root-color-metal   { color: #ffd94a; text-shadow: 0 0 6px rgba(255, 217, 74, 0.8); }
+.root-color-wood    { color: #4cd964; text-shadow: 0 0 6px rgba(76, 217, 100, 0.8); }
+.root-color-water   { color: #5ac8fa; text-shadow: 0 0 6px rgba(90, 200, 250, 0.8); }
+.root-color-fire    { color: #ff3b30; text-shadow: 0 0 6px rgba(255, 59, 48, 0.8); }
+.root-color-earth   { color: #d08b4c; text-shadow: 0 0 6px rgba(208, 139, 76, 0.8); }
+
+.root-color-ice     { color: #a0e9ff; text-shadow: 0 0 6px rgba(160, 233, 255, 0.8); }
+.root-color-thunder { color: #b076ff; text-shadow: 0 0 6px rgba(176, 118, 255, 0.8); }
+.root-color-heart   { color: #ff8ac9; text-shadow: 0 0 6px rgba(255, 138, 201, 0.8); }
+.root-color-spirit  { color: #c6ffb5; text-shadow: 0 0 6px rgba(198, 255, 181, 0.8); }
+.root-color-dream   { color: #ffd1f2; text-shadow: 0 0 6px rgba(255, 209, 242, 0.8); }
+
+.root-color-dark    { color: #b00020; text-shadow: 0 0 6px rgba(176, 0, 32, 0.8); }
+.root-color-light   { color: #fff5d9; text-shadow: 0 0 6px rgba(255, 245, 217, 0.9); }
+.root-color-realm   { color: #c4e0ff; text-shadow: 0 0 6px rgba(196, 224, 255, 0.9); }
+.root-color-holy    { color: #f3e2b5; text-shadow: 0 0 6px rgba(243, 226, 181, 0.9); }
+
+/* 空间 / 时间：一半黑一半白的文字 */
+.root-color-space {
+  background-image: linear-gradient(90deg, #000 0%, #000 50%, #fff 50%, #fff 100%);
+  -webkit-background-clip: text;
+  color: transparent;
+}
+
+.root-color-time {
+  background-image: linear-gradient(90deg, #fff 0%, #fff 50%, #000 50%, #000 100%);
+  -webkit-background-clip: text;
+  color: transparent;
+}
+
+/* 因果：黑白闪烁 */
+.root-color-cause {
+  animation: root-cause-blink 1.2s infinite;
+}
+
+@keyframes root-cause-blink {
+  0%, 45% {
+    color: #000;
+    text-shadow: 0 0 5px rgba(0, 0, 0, 0.8);
+  }
+  55%, 100% {
+    color: #fff;
+    text-shadow: 0 0 5px rgba(255, 255, 255, 0.9);
+  }
+}
+</style>
 </head>
 <body>
 
@@ -405,6 +533,47 @@ button:disabled {
       <button id="startGameBtn">开始修炼</button>
     </div>
   </div>
+
+<!-- 灵根抽取面板：起名之后出现 -->
+<div id="rootDrawPanel" class="panel root-draw-panel" style="display:none;">
+  <h2>抽取你的灵根</h2>
+  <div class="root-draw-subtitle">
+    道号：<span id="rootPlayerName">无名散修</span>
+  </div>
+
+  <!-- 简单转盘区域 -->
+  <div class="root-wheel-wrapper">
+    <div class="root-wheel" id="rootWheel">
+      <div class="root-wheel-name" id="rootWheelName">点击开始转盘</div>
+    </div>
+  </div>
+
+  <!-- 当前抽到的灵根信息 -->
+  <div class="root-result">
+    <div>
+      当前灵根：
+      <span id="rootResultName" class="spirit-root-tag">未抽取</span>
+    </div>
+    <div class="root-result-tier">
+      品阶：<span id="rootResultTier">-</span>
+    </div>
+    <div class="root-result-desc" id="rootResultDesc">请先点击「开始抽取」。</div>
+  </div>
+
+  <div class="root-draw-controls">
+    <button id="btnRootRoll">开始抽取</button>
+    <button id="btnRootReroll" disabled>刷新灵根（剩余 <span id="rootRerollLeft">2</span> 次）</button>
+  </div>
+
+  <div class="root-confirm-row">
+    <button id="btnRootConfirm" class="btn-main" disabled>确认此灵根并开始修行</button>
+  </div>
+
+  <div class="hint root-warning">
+    ※ 灵根一旦确认将<span class="text-highlight">无法更改</span>，请谨慎选择。<br>
+    稀有灵根概率极低，若对当前结果不满意，可使用刷新机会重新抽取。
+  </div>
+</div>
 
   <!-- 游历结算 / 随机事件（仅手动战斗时使用） -->
   <div id="battleResultOverlay" class="overlay-screen">
@@ -801,14 +970,50 @@ button:disabled {
       }
     }
 
-    function getLingRootDisplayName() {
-      if (!lingRoots || lingRoots.length === 0) return '未觉醒';
-      if (lingRoots.length === 1) return lingRoots[0].name;
-      const bothBasic = lingRoots.every(r => r.type === 'basic');
+    function getLingRootDisplayNameFrom(roots) {
+      if (!roots || roots.length === 0) return '未觉醒';
+      if (roots.length === 1) return roots[0].name;
+      const bothBasic = roots.every(r => r.type === 'basic');
       if (bothBasic) {
-        return `${lingRoots[0].short}${lingRoots[1].short}双灵根`;
+        return `${roots[0].short}${roots[1].short}双灵根`;
       }
-      return lingRoots.map(r => r.name).join(' / ');
+      return roots.map(r => r.name).join(' / ');
+    }
+
+    function getLingRootDisplayName() {
+      return getLingRootDisplayNameFrom(lingRoots);
+    }
+
+    // 灵根高光颜色 class 映射
+    const ROOT_COLOR_CLASS_MAP = {
+      cause:   'root-color-cause',
+      time:    'root-color-time',
+      space:   'root-color-space',
+      holy:    'root-color-holy',
+      realm:   'root-color-realm',
+      light:   'root-color-light',
+      dark:    'root-color-dark',
+      dream:   'root-color-dream',
+      spirit:  'root-color-spirit',
+      heart:   'root-color-heart',
+      ice:     'root-color-ice',
+      thunder: 'root-color-thunder',
+      metal:   'root-color-metal',
+      wood:    'root-color-wood',
+      water:   'root-color-water',
+      fire:    'root-color-fire',
+      earth:   'root-color-earth'
+    };
+
+    const ROOT_COLOR_CLASS_LIST = Object.values(ROOT_COLOR_CLASS_MAP);
+
+    function applyLingRootColor(el, roots) {
+      if (!el) return;
+      ROOT_COLOR_CLASS_LIST.forEach(c => el.classList.remove(c));
+      if (!roots || roots.length === 0) return;
+      const first = roots[0];
+      const cls = ROOT_COLOR_CLASS_MAP[first.id];
+      if (cls) el.classList.add(cls);
     }
 
     // 抽灵根：15% 稀有单灵根；其余为单/双五行
@@ -1420,6 +1625,13 @@ const ALL_SKILLS = {
     let playerName = '';
     let lingRoots = [];
 
+    // 开局抽灵根临时状态
+    let tempLingRoots = [];
+    let rootRollUsed = false;
+    let rootRerollLeft = 2;
+    let rootWheelRunning = false;
+    let rootWheelTimer = null;
+
     // 神·/仙号
     let godTitleUnlocked = false;
     let immortalTitle = '';
@@ -1668,6 +1880,18 @@ const ALL_SKILLS = {
     const lingRootTableDiv = document.getElementById('lingRootTable');
     const lingRootBonusText = document.getElementById('lingRootBonusText');
 
+    const rootDrawPanel = document.getElementById('rootDrawPanel');
+    const rootPlayerNameSpan = document.getElementById('rootPlayerName');
+    const rootWheel = document.getElementById('rootWheel');
+    const rootWheelName = document.getElementById('rootWheelName');
+    const rootResultNameSpan = document.getElementById('rootResultName');
+    const rootResultTierSpan = document.getElementById('rootResultTier');
+    const rootResultDescDiv = document.getElementById('rootResultDesc');
+    const btnRootRoll = document.getElementById('btnRootRoll');
+    const btnRootReroll = document.getElementById('btnRootReroll');
+    const btnRootConfirm = document.getElementById('btnRootConfirm');
+    const rootRerollLeftSpan = document.getElementById('rootRerollLeft');
+
     const pageCultivation = document.getElementById('pageCultivation');
     const pageBattle = document.getElementById('pageBattle');
     const pageShop = document.getElementById('pageShop');
@@ -1722,6 +1946,7 @@ const ALL_SKILLS = {
 
     function updateLingRootUI() {
       lingRootNameSpan.textContent = getLingRootDisplayName();
+      applyLingRootColor(lingRootNameSpan, lingRoots);
 
       const meta = getLingRootTierMeta();
       const qiBonus      = ((meta.qiMult - 1) * 100).toFixed(0);
@@ -3178,17 +3403,138 @@ const ALL_SKILLS = {
       doManualBreakthrough();
     });
 
+    // ========== 开局灵根抽取转盘逻辑 ==========
+    function resetRootDrawPanel() {
+      tempLingRoots = [];
+      rootRollUsed = false;
+      rootRerollLeft = 2;
+      rootWheelRunning = false;
+      if (rootWheelTimer) {
+        clearInterval(rootWheelTimer);
+        rootWheelTimer = null;
+      }
+      if (rootRerollLeftSpan) rootRerollLeftSpan.textContent = '2';
+      if (rootResultNameSpan) {
+        rootResultNameSpan.textContent = '未抽取';
+        applyLingRootColor(rootResultNameSpan, null);
+      }
+      if (rootResultTierSpan) rootResultTierSpan.textContent = '-';
+      if (rootResultDescDiv) rootResultDescDiv.textContent = '请先点击「开始抽取」。';
+      if (rootWheelName) {
+        rootWheelName.textContent = '点击开始转盘';
+        applyLingRootColor(rootWheelName, null);
+      }
+      if (btnRootRoll) btnRootRoll.disabled = false;
+      if (btnRootReroll) btnRootReroll.disabled = true;
+      if (btnRootConfirm) btnRootConfirm.disabled = true;
+    }
+
+    function startRootWheelRoll(onFinish) {
+      if (!rootWheelName || rootWheelRunning) return;
+      rootWheelRunning = true;
+      const all = LING_ROOTS;
+      rootWheelTimer = setInterval(() => {
+        const r = all[Math.floor(Math.random() * all.length)];
+        rootWheelName.textContent = r.name;
+        applyLingRootColor(rootWheelName, [r]);
+      }, 80);
+
+      const duration = 1000 + Math.random() * 600;
+      setTimeout(() => {
+        if (rootWheelTimer) {
+          clearInterval(rootWheelTimer);
+          rootWheelTimer = null;
+        }
+        rootWheelRunning = false;
+        if (typeof onFinish === 'function') onFinish();
+      }, duration);
+    }
+
+    function updateRootDrawResult() {
+      if (!tempLingRoots || tempLingRoots.length === 0) return;
+      const displayName = getLingRootDisplayNameFrom(tempLingRoots);
+
+      if (rootResultNameSpan) {
+        rootResultNameSpan.textContent = displayName;
+        applyLingRootColor(rootResultNameSpan, tempLingRoots);
+      }
+      if (rootWheelName) {
+        rootWheelName.textContent = displayName;
+        applyLingRootColor(rootWheelName, tempLingRoots);
+      }
+
+      const old = lingRoots;
+      lingRoots = tempLingRoots;
+      const meta = getLingRootTierMeta();
+      lingRoots = old;
+      if (rootResultTierSpan) rootResultTierSpan.textContent = meta.label;
+
+      let desc = '';
+      if (tempLingRoots.length === 2 && tempLingRoots.every(r => r.type === 'basic')) {
+        const rel = getDualBasicRelation(tempLingRoots);
+        desc = `${tempLingRoots[0].name} 与 ${tempLingRoots[1].name} 并存。${rel.descExtra || ''}`;
+      } else {
+        desc = tempLingRoots.map(r => r.desc).join(' / ');
+      }
+      if (rootResultDescDiv) rootResultDescDiv.textContent = desc;
+    }
+
     startGameBtn.addEventListener('click', () => {
       let name = playerNameInput.value.trim();
       if (!name) name = '无名散修';
       playerName = name;
-      if (!lingRoots || lingRoots.length === 0) {
-        lingRoots = generateLingRoots();
+      playerNameSpan.textContent = playerName;
+      if (rootPlayerNameSpan) {
+        rootPlayerNameSpan.textContent = playerName;
       }
-      gameStarted = true;
+      resetRootDrawPanel();
       startScreen.style.display = 'none';
+      if (rootDrawPanel) {
+        rootDrawPanel.style.display = 'block';
+      }
+    });
+
+    btnRootRoll.addEventListener('click', () => {
+      if (rootRollUsed) return;
+      rootRollUsed = true;
+      if (btnRootRoll) btnRootRoll.disabled = true;
+      if (btnRootReroll) btnRootReroll.disabled = true;
+      if (btnRootConfirm) btnRootConfirm.disabled = true;
+
+      startRootWheelRoll(() => {
+        tempLingRoots = generateLingRoots();
+        updateRootDrawResult();
+        if (btnRootConfirm) btnRootConfirm.disabled = false;
+        if (rootRerollLeft > 0 && btnRootReroll) btnRootReroll.disabled = false;
+      });
+    });
+
+    btnRootReroll.addEventListener('click', () => {
+      if (rootRerollLeft <= 0) return;
+      if (rootWheelRunning) return;
+      rootRerollLeft--;
+      if (rootRerollLeftSpan) rootRerollLeftSpan.textContent = String(rootRerollLeft);
+      if (btnRootReroll) btnRootReroll.disabled = true;
+      if (btnRootConfirm) btnRootConfirm.disabled = true;
+
+      startRootWheelRoll(() => {
+        tempLingRoots = generateLingRoots();
+        updateRootDrawResult();
+        if (btnRootConfirm) btnRootConfirm.disabled = false;
+        if (rootRerollLeft > 0 && btnRootReroll) btnRootReroll.disabled = false;
+      });
+    });
+
+    btnRootConfirm.addEventListener('click', () => {
+      if (!tempLingRoots || tempLingRoots.length === 0) return;
+      lingRoots = tempLingRoots.slice();
+      gameStarted = true;
+      if (rootDrawPanel) rootDrawPanel.style.display = 'none';
       saveGame();
       updateUI();
+      if (autoBattle) {
+        maybeStartAutoBattle();
+      }
     });
 
     /* ========== 放置循环 & 自动存档 ========== */
