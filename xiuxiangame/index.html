@@ -519,6 +519,55 @@ button:disabled {
     text-shadow: 0 0 5px rgba(255, 255, 255, 0.9);
   }
 }
+
+/* ===== 自定义底部主菜单图片条 ===== */
+.app-container {
+  padding-bottom: 130px;
+}
+
+.bottom-nav {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: 16px;
+  width: 100%;
+  max-width: 520px;
+  height: 96px;
+  margin-top: 0;
+  padding: 0;
+  border-radius: 0;
+  background: url('main_menu_bar_cropped.png') no-repeat center center;
+  background-size: 100% 100%;
+  background-position: center bottom;
+  box-shadow: none;
+}
+
+.bottom-nav .nav-item {
+  flex: 1;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+  padding-bottom: 12px;
+  background: transparent;
+}
+
+.bottom-nav .nav-icon,
+.bottom-nav .nav-label {
+  font-size: 0;
+  line-height: 0;
+}
+
+.bottom-nav .nav-icon {
+  display: none;
+}
+
+.bottom-nav .nav-label {
+  display: none;
+}
+
+
 </style>
 </head>
 <body>
@@ -828,13 +877,13 @@ button:disabled {
         <div class="nav-icon">🧭</div>
         <div class="nav-label">游历</div>
       </div>
-      <div class="nav-item" data-page="shop">
-        <div class="nav-icon">🛒</div>
-        <div class="nav-label">市集</div>
-      </div>
       <div class="nav-item" data-page="skills">
         <div class="nav-icon">📜</div>
         <div class="nav-label">功法</div>
+      </div>
+      <div class="nav-item" data-page="shop">
+        <div class="nav-icon">🛒</div>
+        <div class="nav-label">市集</div>
       </div>
       <div class="nav-item" data-page="sect">
         <div class="nav-icon">⛩️</div>
