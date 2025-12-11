@@ -463,6 +463,13 @@ button:disabled {
   color: #ffdd9b;
 }
 
+.switch-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+}
+
 .spirit-root-tag {
   display: inline-flex;
   align-items: center;
@@ -623,6 +630,60 @@ button:disabled {
     稀有灵根概率极低，若对当前结果不满意，可使用刷新机会重新抽取。
   </div>
 </div>
+
+  <!-- 洗髓丹 · 灵根重塑转盘 -->
+  <div id="washRootOverlay" class="overlay-screen">
+    <div class="result-card wash-root-card">
+      <h2>洗髓丹 · 灵根重塑</h2>
+      <div class="hint">
+        洗髓丹可以让你尝试抽取一组新的灵根，不会立刻生效，需要你手动选择是否替换。
+      </div>
+
+      <div class="root-result">
+        <div>
+          当前灵根：
+          <span id="washOldRootName" class="spirit-root-tag">未觉醒</span>
+        </div>
+      </div>
+
+      <div class="root-wheel-wrapper">
+        <div class="root-wheel" id="washRootWheel">
+          <div class="root-wheel-name" id="washRootWheelName">点击开始转盘</div>
+        </div>
+      </div>
+
+      <div class="root-result">
+        <div>
+          新灵根：
+          <span id="washRootResultName" class="spirit-root-tag">未抽取</span>
+        </div>
+        <div class="root-result-tier">
+          品阶：<span id="washRootResultTier">-</span>
+        </div>
+        <div class="root-result-desc" id="washRootResultDesc">请先点击「开始转盘」。</div>
+      </div>
+
+      <div class="root-draw-controls">
+        <button id="btnWashRootRoll">开始转盘</button>
+      </div>
+
+      <div class="root-draw-controls">
+        <button id="btnWashKeepOld">保留原灵根</button>
+        <button id="btnWashReplace" class="btn-main" disabled>替换为新灵根</button>
+      </div>
+
+      <div class="hint">
+        <label class="switch-label">
+          <input type="checkbox" id="washConfirmToggle" checked />
+          <span>替换灵根前需要确认提示</span>
+        </label>
+      </div>
+
+      <div class="root-confirm-row">
+        <button id="btnWashClose" class="btn-small">关闭</button>
+      </div>
+    </div>
+  </div>
 
   <!-- 游历结算 / 随机事件（仅手动战斗时使用） -->
   <div id="battleResultOverlay" class="overlay-screen">
@@ -826,6 +887,23 @@ button:disabled {
           </div>
           <div class="hint">
             品质越高，每一层丹药提供的额外打坐真气越多。未来可以在此扩展更多丹药与功法。
+          </div>
+        </div>
+
+        <div class="panel">
+          <h2>灵石市集 · 洗髓丹</h2>
+          <div class="hint">
+            洗髓丹可以重塑灵根，仅对已经觉醒灵根的修士有效。当前为测试阶段，价格为 0 灵石。
+          </div>
+          <div class="upgrade">
+            <div class="upgrade-info">
+              购买一枚洗髓丹，立即弹出灵根转盘，随机生成一组新的灵根。<br>
+              价格：<span id="washPillCost">0</span> 灵石
+            </div>
+            <button id="buyWashPillBtn">购买洗髓丹（重塑灵根）</button>
+          </div>
+          <div class="hint">
+            转盘结束后，你可以选择保留原灵根，或用新的灵根替换。替换前是否弹出确认提示，可在弹出的洗髓界面中切换开关。
           </div>
         </div>
 
@@ -1896,6 +1974,8 @@ const ALL_SKILLS = {
     // 玩家 & 灵根
     let playerName = '';
     let lingRoots = [];
+    let pendingWashLingRoots = [];
+    let washConfirmEnabled = true;
 
     // 开局抽灵根临时状态
     let tempLingRoots = [];
@@ -1903,6 +1983,8 @@ const ALL_SKILLS = {
     let rootRerollLeft = 2;
     let rootWheelRunning = false;
     let rootWheelTimer = null;
+    let washWheelRunning = false;
+    let washWheelTimer = null;
 
     // 神·/仙号
     let godTitleUnlocked = false;
@@ -1927,6 +2009,7 @@ const ALL_SKILLS = {
     const pillBaseStoneCost = 4;
     const caveUpgradeBaseCost = 20;
     const pillUpgradeBaseCost = 15;
+    const washPillBaseCost = 0; // 洗髓丹基础价格（当前为测试：0 灵石）
 
     function getCaveQualityName() {
       const idx = Math.min(caveQuality - 1, CAVE_QUALITY_NAMES.length - 1);
@@ -1948,6 +2031,10 @@ const ALL_SKILLS = {
     }
     function getPillUpgradeCost() {
       return Math.floor(pillUpgradeBaseCost * Math.pow(2, pillQuality - 1));
+    }
+    function getWashPillCost() {
+      // 未来若要开放正式价格，可在此根据次数或境界动态调整
+      return washPillBaseCost;
     }
 
     function getCaveQps() {
@@ -2015,6 +2102,12 @@ const ALL_SKILLS = {
         typeof data.immortalTitle === 'string' ? data.immortalTitle : '';
       immortalTitleUnlocked = !!data.immortalTitleUnlocked;
 
+      if (typeof data.washConfirmEnabled === 'boolean') {
+        washConfirmEnabled = data.washConfirmEnabled;
+      } else {
+        washConfirmEnabled = true;
+      }
+
       if (Array.isArray(data.learnedSkillIds)) {
         learnedSkillIds = data.learnedSkillIds.filter(id => !!ALL_SKILLS[id]);
       } else {
@@ -2055,6 +2148,7 @@ const ALL_SKILLS = {
         immortalTitleUnlocked,
         learnedSkillIds,
         equippedMethodId,
+        washConfirmEnabled,
         lastSaveTime: Date.now()
       };
       try {
@@ -2181,11 +2275,13 @@ const ALL_SKILLS = {
     const pillLevelSpan = document.getElementById('pillLevel');
     const pillQualitySpan = document.getElementById('pillQualitySpan');
     const pillUpgradeCostSpan = document.getElementById('pillUpgradeCost');
+    const washPillCostSpan = document.getElementById('washPillCost');
 
     const buyCaveBtn = document.getElementById('buyCaveBtn');
     const upgradeCaveBtn = document.getElementById('upgradeCaveBtn');
     const buyPillBtn = document.getElementById('buyPillBtn');
     const upgradePillBtn = document.getElementById('upgradePillBtn');
+    const buyWashPillBtn = document.getElementById('buyWashPillBtn');
 
     const shopSkillList = document.getElementById('shopSkillList');
 
@@ -2203,6 +2299,19 @@ const ALL_SKILLS = {
     const resultDrops = document.getElementById('resultDrops');
     const resultExtra = document.getElementById('resultExtra');
     const randomEventDiv = document.getElementById('randomEvent');
+
+    const washRootOverlay = document.getElementById('washRootOverlay');
+    const washOldRootNameSpan = document.getElementById('washOldRootName');
+    const washRootWheel = document.getElementById('washRootWheel');
+    const washRootWheelName = document.getElementById('washRootWheelName');
+    const washRootResultNameSpan = document.getElementById('washRootResultName');
+    const washRootResultTierSpan = document.getElementById('washRootResultTier');
+    const washRootResultDescDiv = document.getElementById('washRootResultDesc');
+    const btnWashRootRoll = document.getElementById('btnWashRootRoll');
+    const btnWashKeepOld = document.getElementById('btnWashKeepOld');
+    const btnWashReplace = document.getElementById('btnWashReplace');
+    const btnWashClose = document.getElementById('btnWashClose');
+    const washConfirmToggle = document.getElementById('washConfirmToggle');
     const closeResultBtn = document.getElementById('closeResultBtn');
 
     // 功法页 DOM
@@ -3090,6 +3199,8 @@ const ALL_SKILLS = {
       pillLevelSpan.textContent = pillLevel;
       pillQualitySpan.textContent = getPillQualityName();
       pillUpgradeCostSpan.textContent = pillUpCost;
+      const washCost = getWashPillCost();
+      if (washPillCostSpan) washPillCostSpan.textContent = washCost;
 
       plusButtons.forEach(btn => {
         btn.disabled = abilityPoints <= 0 || !gameStarted;
@@ -3104,6 +3215,10 @@ const ALL_SKILLS = {
         !gameStarted || spiritStones < pillBuyCost;
       upgradePillBtn.disabled =
         !gameStarted || pillQuality >= MAX_PILL_QUALITY || spiritStones < pillUpCost;
+      if (buyWashPillBtn) {
+        buyWashPillBtn.disabled =
+          !gameStarted || !lingRoots.length || spiritStones < washCost;
+      }
 
       breakthroughBtn.disabled = !canManualBreakthrough();
 
@@ -3659,6 +3774,22 @@ const ALL_SKILLS = {
       }
     });
 
+
+    if (buyWashPillBtn) {
+      buyWashPillBtn.addEventListener('click', () => {
+        if (!gameStarted) return;
+        if (!lingRoots || lingRoots.length === 0) {
+          alert('你尚未觉醒任何灵根，无法使用洗髓丹。');
+          return;
+        }
+        const cost = getWashPillCost();
+        if (spiritStones < cost) return;
+        spiritStones -= cost;
+        openWashRootOverlay();
+        updateUI();
+      });
+    }
+
     plusButtons.forEach(btn => {
       btn.addEventListener('click', () => {
         if (!gameStarted) return;
@@ -3782,6 +3913,95 @@ const ALL_SKILLS = {
       if (rootResultDescDiv) rootResultDescDiv.textContent = desc;
     }
 
+    function resetWashRootPanel() {
+      pendingWashLingRoots = [];
+      if (washRootResultNameSpan) {
+        washRootResultNameSpan.textContent = '未抽取';
+        applyLingRootColor(washRootResultNameSpan, null);
+      }
+      if (washRootResultTierSpan) washRootResultTierSpan.textContent = '-';
+      if (washRootResultDescDiv) washRootResultDescDiv.textContent = '请先点击「开始转盘」。';
+      if (washRootWheelName) {
+        washRootWheelName.textContent = '点击开始转盘';
+        applyLingRootColor(washRootWheelName, null);
+      }
+      if (btnWashRootRoll) btnWashRootRoll.disabled = false;
+      if (btnWashReplace) btnWashReplace.disabled = true;
+      if (washWheelTimer) {
+        clearInterval(washWheelTimer);
+        washWheelTimer = null;
+      }
+      washWheelRunning = false;
+      if (washConfirmToggle) washConfirmToggle.checked = washConfirmEnabled;
+    }
+
+    function startWashRootWheelRoll(onFinish) {
+      if (!washRootWheelName || washWheelRunning) return;
+      washWheelRunning = true;
+      const all = LING_ROOTS;
+      washWheelTimer = setInterval(() => {
+        const r = all[Math.floor(Math.random() * all.length)];
+        washRootWheelName.textContent = r.name;
+        applyLingRootColor(washRootWheelName, [r]);
+      }, 80);
+
+      const duration = 1000 + Math.random() * 600;
+      setTimeout(() => {
+        if (washWheelTimer) {
+          clearInterval(washWheelTimer);
+          washWheelTimer = null;
+        }
+        washWheelRunning = false;
+        if (typeof onFinish === 'function') onFinish();
+      }, duration);
+    }
+
+    function updateWashRootResult() {
+      if (!pendingWashLingRoots || pendingWashLingRoots.length === 0) return;
+      const displayName = getLingRootDisplayNameFrom(pendingWashLingRoots);
+
+      if (washRootResultNameSpan) {
+        washRootResultNameSpan.textContent = displayName;
+        applyLingRootColor(washRootResultNameSpan, pendingWashLingRoots);
+      }
+      if (washRootWheelName) {
+        washRootWheelName.textContent = displayName;
+        applyLingRootColor(washRootWheelName, pendingWashLingRoots);
+      }
+
+      const old = lingRoots;
+      lingRoots = pendingWashLingRoots;
+      const meta = getLingRootTierMeta();
+      lingRoots = old;
+
+      let tierText = meta.label;
+      let desc = '';
+
+      if (pendingWashLingRoots.length === 2 && pendingWashLingRoots.every(r => r.type === 'basic')) {
+        const rel = getDualBasicRelation(pendingWashLingRoots);
+        if (rel && rel.comboName) {
+          tierText = `${meta.label} · ${rel.comboName}`;
+        }
+        desc = `${pendingWashLingRoots[0].name} 与 ${pendingWashLingRoots[1].name} 并存。${(rel && rel.descExtra) || ''}`;
+      } else {
+        desc = pendingWashLingRoots.map(r => r.desc).join(' / ');
+      }
+
+      if (washRootResultTierSpan) washRootResultTierSpan.textContent = tierText;
+      if (washRootResultDescDiv) washRootResultDescDiv.textContent = desc;
+    }
+
+    function openWashRootOverlay() {
+      if (!washRootOverlay) return;
+      if (!lingRoots || lingRoots.length === 0) return;
+      resetWashRootPanel();
+      if (washOldRootNameSpan) {
+        washOldRootNameSpan.textContent = getLingRootDisplayName();
+        applyLingRootColor(washOldRootNameSpan, lingRoots);
+      }
+      washRootOverlay.style.display = 'flex';
+    }
+
     startGameBtn.addEventListener('click', () => {
       let name = playerNameInput.value.trim();
       if (!name) name = '无名散修';
@@ -3839,6 +4059,59 @@ const ALL_SKILLS = {
         maybeStartAutoBattle();
       }
     });
+
+    if (btnWashRootRoll) {
+      btnWashRootRoll.addEventListener('click', () => {
+        if (washWheelRunning) return;
+        btnWashRootRoll.disabled = true;
+        if (btnWashReplace) btnWashReplace.disabled = true;
+
+        startWashRootWheelRoll(() => {
+          pendingWashLingRoots = generateLingRoots();
+          updateWashRootResult();
+          btnWashRootRoll.disabled = false;
+          if (btnWashReplace) btnWashReplace.disabled = false;
+        });
+      });
+    }
+
+    if (btnWashKeepOld) {
+      btnWashKeepOld.addEventListener('click', () => {
+        pendingWashLingRoots = [];
+        if (washRootOverlay) washRootOverlay.style.display = 'none';
+      });
+    }
+
+    if (btnWashReplace) {
+      btnWashReplace.addEventListener('click', () => {
+        if (!pendingWashLingRoots || pendingWashLingRoots.length === 0) return;
+        let ok = true;
+        if (washConfirmEnabled) {
+          ok = window.confirm('确定要用新的灵根替换原本的灵根吗？此操作将立即生效，无法撤销。');
+        }
+        if (!ok) return;
+        lingRoots = pendingWashLingRoots.slice();
+        pendingWashLingRoots = [];
+        recalcDerivedStats();
+        updateUI();
+        saveGame();
+        if (washRootOverlay) washRootOverlay.style.display = 'none';
+      });
+    }
+
+    if (btnWashClose) {
+      btnWashClose.addEventListener('click', () => {
+        pendingWashLingRoots = [];
+        if (washRootOverlay) washRootOverlay.style.display = 'none';
+      });
+    }
+
+    if (washConfirmToggle) {
+      washConfirmToggle.checked = washConfirmEnabled;
+      washConfirmToggle.addEventListener('change', () => {
+        washConfirmEnabled = !!washConfirmToggle.checked;
+      });
+    }
 
     /* ========== 放置循环 & 自动存档 ========== */
 
