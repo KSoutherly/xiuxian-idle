@@ -3400,6 +3400,8 @@ if (typeof data.equippedMethodId === 'string' && ALL_SKILLS[data.equippedMethodI
     function getMaxUnlockedMapStage() {
       // 普通模式：仅按当前境界解锁
       // 挑战模式：允许使用“挑战通关提前解锁”的地图
+      // 与 UI 勾选保持一致（避免浏览器回填 checkbox 但未触发 change 事件导致状态不同步）
+      if (challengeModeToggle) challengeMode = !!challengeModeToggle.checked;
       return challengeMode ? Math.max(unlockedMaxMapStage, realmStage) : realmStage;
     }
 
@@ -4792,6 +4794,11 @@ if (typeof data.equippedMethodId === 'string' && ALL_SKILLS[data.equippedMethodI
     }
 
     switchPage('cultivation');
+    // 初始化时同步挑战模式状态（避免浏览器自动回填 checkbox 但未触发 change 事件）
+    if (challengeModeToggle) {
+      challengeMode = !!challengeModeToggle.checked;
+      if (challengeMode) { lockSpeedForChallengeUI(); } else { unlockSpeedForChallengeUI(); }
+    }
     initMaps();
       updateUI();
 
