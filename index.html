@@ -897,6 +897,12 @@ button:disabled {
               自动战斗结算（勾选后持续游历，不再弹出结算窗口）
             </label>
           </div>
+                    <div class="hint">
+            <label>
+              <input type="checkbox" id="challengeModeToggle">
+              挑战模式（通关可提前解锁下一地图；战斗倍速锁定为0.5x）
+            </label>
+          </div>
           <button id="startBattleBtn" class="btn-main">开始游历试炼</button>
           <div id="battleResult" class="hint"></div>
           <div class="battle-log-wrapper">
@@ -1041,6 +1047,7 @@ button:disabled {
   </div>
 
   <script>
+
     /* ========== 灵根设定 & 层级加成（只影响修炼 & 奇遇） ========== */
 
     const LING_ROOTS = [
@@ -2165,6 +2172,13 @@ const ALL_SKILLS = {
     let battleTimerId = null;
     const BATTLE_BASE_DELAY = 700; // 基础回合间隔（毫秒），默认比之前稍慢一些
     let battleSpeed = 1; // 战斗倍速：1x / 2x / 3x / 4x
+    let challengeMode = false;
+    let battleSpeedLocked = false;
+    let battleSpeedBeforeLock = null;
+
+    // 地图解锁：已解锁的最高地图阶段（挑战模式可提前解锁）
+    let unlockedMaxMapStage = 0;
+    let lastRealmStageForMaps = -1;
     const MAX_TURNS = 20;
     let currentMapId = 'map_0';
 
@@ -2327,6 +2341,7 @@ const ALL_SKILLS = {
 
       currentMapId =
         typeof data.currentMapId === 'string' ? data.currentMapId : 'map_0';
+      unlockedMaxMapStage = typeof data.unlockedMaxMapStage === 'number' ? Math.max(0, Math.floor(data.unlockedMaxMapStage)) : 0;
       autoBattle = !!data.autoBattle;
       godTitleUnlocked = !!data.godTitleUnlocked;
       immortalTitle =
@@ -2387,6 +2402,7 @@ if (typeof data.equippedMethodId === 'string' && ALL_SKILLS[data.equippedMethodI
         playerName,
         lingRootIds: lingRoots.map(r => r.id),
         currentMapId,
+        unlockedMaxMapStage,
         autoBattle,
         godTitleUnlocked,
         immortalTitle,
@@ -2545,6 +2561,7 @@ if (typeof data.equippedMethodId === 'string' && ALL_SKILLS[data.equippedMethodI
     const battleLogDiv = document.getElementById('battleLog');
     const battleSpeedBtn = document.getElementById('battleSpeedBtn');
     const autoBattleToggle = document.getElementById('autoBattleToggle');
+    const challengeModeToggle = document.getElementById('challengeModeToggle');
 
     const battleResultOverlay = document.getElementById('battleResultOverlay');
     const resultTitle = document.getElementById('resultTitle');
@@ -3078,9 +3095,9 @@ if (typeof data.equippedMethodId === 'string' && ALL_SKILLS[data.equippedMethodI
           }
 
           if (gameStarted) {
-            const wantSave = confirm(
-              '在切换到新的存档槽前，要先将当前进度保存到当前槽位吗？\n\n“确定”=保存后切换，“取消”=直接切换。'
-            );
+            const wantSave = confirm(`在切换到新的存档槽前，要先将当前进度保存到当前槽位吗？
+
+“确定”=保存后切换，“取消”=直接切换。`);
             if (wantSave) {
               saveGame();
             }
@@ -3380,16 +3397,109 @@ if (typeof data.equippedMethodId === 'string' && ALL_SKILLS[data.equippedMethodI
       }
     }
 
+    function getMaxUnlockedMapStage() {
+      // 普通模式：仅按当前境界解锁
+      // 挑战模式：允许使用“挑战通关提前解锁”的地图
+      return challengeMode ? Math.max(unlockedMaxMapStage, realmStage) : realmStage;
+    }
+
+    function isMapUnlocked(map) {
+      if (!map) return false;
+      return map.enemyStage <= getMaxUnlockedMapStage();
+    }
+
+    function syncMapUnlockToRealm() {
+      const next = Math.max(unlockedMaxMapStage, realmStage);
+      const changed = next !== unlockedMaxMapStage;
+      unlockedMaxMapStage = next;
+      return changed;
+    }
+
+    function refreshBattleStartBtnState() {
+      const map = getCurrentMap();
+
+      if (!isMapUnlocked(map)) {
+        battleResultDiv.textContent = '该目的地尚未解锁：提升境界解锁，或在挑战模式通关上一张地图提前解锁。';
+        return;
+      }
+
+      const isChallenge = !!(challengeModeToggle && challengeModeToggle.checked);
+      const unlocked = isMapUnlocked(map);
+      // 战斗中由 startBattle/endBattle 控制 disabled；这里只处理“未解锁”的硬限制
+      if (!unlocked && !currentBattle && !battleTimerId) {
+        startBattleBtn.disabled = true;
+        battleResultDiv.textContent = '该目的地尚未解锁：提升境界解锁，或在挑战模式通关上一张地图提前解锁。';
+      } else if (!currentBattle && !battleTimerId) {
+        startBattleBtn.disabled = false;
+      }
+    }
+
+    function lockSpeedForChallengeUI() {
+      if (battleSpeedLocked) return;
+      battleSpeedBeforeLock = battleSpeed;
+      battleSpeed = 0.5;
+      battleSpeedLocked = true;
+      battleSpeedBtn.textContent = 'x0.5（锁定）';
+      battleSpeedBtn.disabled = true;
+
+      // 若战斗正在进行，则根据新的倍速重启计时器
+      if (currentBattle && battleTimerId) {
+        clearInterval(battleTimerId);
+        battleTimerId = setInterval(runBattleTurn, getBattleInterval());
+      }
+    }
+
+    function unlockSpeedForChallengeUI() {
+      if (!battleSpeedLocked) return;
+      battleSpeedLocked = false;
+      battleSpeedBtn.disabled = false;
+      if (typeof battleSpeedBeforeLock === 'number') {
+        battleSpeed = battleSpeedBeforeLock;
+      }
+      battleSpeedBeforeLock = null;
+      battleSpeedBtn.textContent = 'x' + battleSpeed;
+
+      if (currentBattle && battleTimerId) {
+        clearInterval(battleTimerId);
+        battleTimerId = setInterval(runBattleTurn, getBattleInterval());
+      }
+    }
+
     function initMaps() {
+      // 同步境界解锁
+      syncMapUnlockToRealm();
+
       mapSelect.innerHTML = '';
+      const maxUnlocked = getMaxUnlockedMapStage();
+
       MAPS.forEach(m => {
         const opt = document.createElement('option');
         opt.value = m.id;
-        opt.textContent = m.name;
+
+        const locked = m.enemyStage > maxUnlocked;
+        opt.disabled = locked;
+
+        if (locked) {
+          opt.textContent = `${m.name}（未解锁）`;
+        } else {
+          const early = challengeMode && (m.enemyStage > realmStage);
+          opt.textContent = early ? `${m.name}（提前解锁）` : m.name;
+        }
+
         mapSelect.appendChild(opt);
       });
+
+      // 若当前选择指向未解锁地图，则回退到“最高已解锁”
+      const cur = getCurrentMap();
+      if (!isMapUnlocked(cur)) {
+        const fallbackStage = Math.min(maxUnlocked, MAPS.length - 1);
+        currentMapId = MAPS[fallbackStage].id;
+      }
+
       mapSelect.value = currentMapId;
+      refreshBattleStartBtnState();
     }
+
 
     function getCurrentMap() {
       return MAPS.find(m => m.id === currentMapId) || MAPS[0];
@@ -3461,6 +3571,15 @@ if (typeof data.equippedMethodId === 'string' && ALL_SKILLS[data.equippedMethodI
       lingRoots = [];
       currentBattle = null;
       currentMapId = 'map_0';
+      unlockedMaxMapStage = 0;
+      lastRealmStageForMaps = -1;
+      challengeMode = false;
+      battleSpeedLocked = false;
+      battleSpeedBeforeLock = null;
+      if (challengeModeToggle) { challengeModeToggle.checked = false; }
+      if (autoBattleToggle) { autoBattleToggle.disabled = false; }
+      if (battleSpeedBtn) { battleSpeedBtn.disabled = false; battleSpeedBtn.textContent = 'x' + battleSpeed; }
+
       gameStarted = false;
       autoBattle = false;
       godTitleUnlocked = false;
@@ -3522,6 +3641,11 @@ if (typeof data.equippedMethodId === 'string' && ALL_SKILLS[data.equippedMethodI
       qpcSpan.textContent = effectiveQpc.toFixed(1);
 
       realmSpan.textContent = getRealmNameFromStage(realmStage) + (isHeavyInjured() ? '（重伤）' : '');
+
+      if (realmStage !== lastRealmStageForMaps) {
+        lastRealmStageForMaps = realmStage;
+        initMaps();
+      }
 
       expMainSpan.textContent = experience;
       const expReq = getCurrentExpRequirementForBreak(realmStage, experience);
@@ -3776,6 +3900,11 @@ if (typeof data.equippedMethodId === 'string' && ALL_SKILLS[data.equippedMethodI
         extra += (extra ? ' ' : '') + battleData.overlevelPenaltyNote;
       }
 
+      // 挑战通关提前解锁提示
+      if (battleData && battleData.challengeUnlockNote) {
+        extra += (extra ? ' ' : '') + battleData.challengeUnlockNote;
+      }
+
       resultExtra.textContent = extra;
 
       randomEventDiv.textContent = eventInfo.text || '本次未触发奇遇。';
@@ -3826,6 +3955,21 @@ if (typeof data.equippedMethodId === 'string' && ALL_SKILLS[data.equippedMethodI
       const expBefore = battleData.expBefore;
 
       // ===== 越级挑战失败惩罚（仅在失败时触发）=====
+      // ===== 挑战模式：通关可提前解锁下一地图 =====
+      let challengeUnlockNote = '';
+      if (outcome === 'win' && battleData.isChallenge) {
+        const nextStage = (map.enemyStage || 0) + 1;
+        if (nextStage < MAPS.length) {
+          const before = unlockedMaxMapStage;
+          if (unlockedMaxMapStage < nextStage) unlockedMaxMapStage = nextStage;
+          if (before < unlockedMaxMapStage) {
+            challengeUnlockNote = `挑战通关：提前解锁「${MAPS[nextStage].name}」。`;
+            appendBattleLog(challengeUnlockNote);
+          }
+        }
+      }
+      battleData.challengeUnlockNote = challengeUnlockNote;
+
       let overlevelPenaltyNote = '';
       if (outcome === 'lose' && isOverlevelChallenge(map)) {
         if (overlevelFailMapId !== map.id) {
@@ -4029,6 +4173,7 @@ if (typeof data.equippedMethodId === 'string' && ALL_SKILLS[data.equippedMethodI
       const pBase = getPlayerBattleStats();
       const eff = getLingRootBattleEffects();
       const map = getCurrentMap();
+      const isChallenge = !!(challengeModeToggle && challengeModeToggle.checked);
       const enemyBase = generateRandomEnemy(map.enemyStage);
 
       const maxHp = Math.floor(pBase.maxHp * eff.hpMul);
@@ -4047,7 +4192,18 @@ if (typeof data.equippedMethodId === 'string' && ALL_SKILLS[data.equippedMethodI
         root: enemyBase.root
       };
 
+      // 挑战模式：敌人更强（用于“通关提前解锁”的代价）
+      if (isChallenge) {
+        enemy.maxHp = Math.floor(enemy.maxHp * 1.8);
+        enemy.hp = enemy.maxHp;
+        enemy.atk = Math.floor(enemy.atk * 1.35);
+        enemy.dodge = Math.min(0.45, enemy.dodge + 0.05);
+        enemy.spd = Math.floor(enemy.spd * 1.1);
+      }
+
+
       currentBattle = {
+        isChallenge,
         player: {
           hp: maxHp,
           maxHp,
@@ -4129,8 +4285,30 @@ if (typeof data.equippedMethodId === 'string' && ALL_SKILLS[data.equippedMethodI
 
     mapSelect.addEventListener('change', () => {
       currentMapId = mapSelect.value;
+      refreshBattleStartBtnState();
       saveGame();
     });
+
+    challengeModeToggle.addEventListener('change', () => {
+      challengeMode = !!challengeModeToggle.checked;
+
+      // 挑战模式下：锁定 0.5x 倍速
+      if (challengeMode) {
+        lockSpeedForChallengeUI();
+        // 挑战模式建议手动进行：关闭自动战斗
+        autoBattle = false;
+        autoBattleToggle.checked = false;
+        autoBattleToggle.disabled = true;
+      } else {
+        unlockSpeedForChallengeUI();
+        autoBattleToggle.disabled = false;
+      }
+
+      initMaps();
+      refreshBattleStartBtnState();
+      saveGame();
+    });
+
 
     autoBattleToggle.addEventListener('change', () => {
       autoBattle = autoBattleToggle.checked;
@@ -4149,6 +4327,7 @@ if (typeof data.equippedMethodId === 'string' && ALL_SKILLS[data.equippedMethodI
       battleSpeedBtn.textContent = 'x' + battleSpeed;
 
       battleSpeedBtn.addEventListener('click', () => {
+        if (battleSpeedLocked) return;
         let idx = speedSteps.indexOf(battleSpeed);
         if (idx === -1) idx = 2; // 默认指向 1x
         idx = (idx + 1) % speedSteps.length;
@@ -4603,11 +4782,13 @@ if (typeof data.equippedMethodId === 'string' && ALL_SKILLS[data.equippedMethodI
     }
 
     switchPage('cultivation');
-    updateUI();
+    initMaps();
+      updateUI();
 
     if (gameStarted && autoBattle) {
       maybeStartAutoBattle();
     }
+  
   </script>
 </body>
 </html>
