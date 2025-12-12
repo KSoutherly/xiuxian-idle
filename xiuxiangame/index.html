@@ -3965,6 +3965,14 @@ if (typeof data.equippedMethodId === 'string' && ALL_SKILLS[data.equippedMethodI
           if (before < unlockedMaxMapStage) {
             challengeUnlockNote = `挑战通关：提前解锁「${MAPS[nextStage].name}」。`;
             appendBattleLog(challengeUnlockNote);
+
+            // 若开启自动游历：挑战通关后自动切换到新解锁地图继续刷
+            if (autoBattle) {
+              currentMapId = MAPS[nextStage].id;
+              if (mapSelect) mapSelect.value = currentMapId;
+              saveGame();
+            }
+
           }
         }
       }
@@ -4297,18 +4305,18 @@ if (typeof data.equippedMethodId === 'string' && ALL_SKILLS[data.equippedMethodI
       // 挑战模式下：锁定 0.5x 倍速
       if (challengeMode) {
         lockSpeedForChallengeUI();
-        // 挑战模式建议手动进行：关闭自动战斗
-        autoBattle = false;
-        autoBattleToggle.checked = false;
-        autoBattleToggle.disabled = true;
       } else {
         unlockSpeedForChallengeUI();
-        autoBattleToggle.disabled = false;
       }
 
       initMaps();
       refreshBattleStartBtnState();
       saveGame();
+
+      // 若开启了自动游历，且当前页在游历页，则尝试继续
+      if (autoBattle && currentPage === 'battle') {
+        maybeStartAutoBattle();
+      }
     });
 
 
