@@ -1847,14 +1847,29 @@ const ALL_SKILLS = {
     /* ========== 功法状态 ========== */
 
     let learnedSkillIds = [];   // 已习得功法/秘籍/武技 id 列表
+    let skillScrollIds = [];    // 未学习的功法/秘籍/武技卷轴 id 列表
     let equippedMethodId = null; // 当前主修心法 id（最多一个）
+    let didMigrateIncompatibleSkills = false; // 一次性迁移：已掌握但灵根不符的功法移回卷轴
 
     function getSkillById(id) {
       return ALL_SKILLS[id] || null;
     }
 
-    function hasSkill(id) {
+    function hasLearnedSkill(id) {
       return learnedSkillIds.includes(id);
+    }
+
+    function hasSkillScroll(id) {
+      return skillScrollIds.includes(id);
+    }
+
+    function hasAnySkillItem(id) {
+      return hasLearnedSkill(id) || hasSkillScroll(id);
+    }
+
+    // 兼容旧调用：hasSkill 仅表示“已掌握”
+    function hasSkill(id) {
+      return hasLearnedSkill(id);
     }
 
     function addSkill(id) {
@@ -1865,6 +1880,82 @@ const ALL_SKILLS = {
       }
       return false;
     }
+
+    function addSkillScroll(id) {
+      if (!ALL_SKILLS[id]) return false;
+      if (hasAnySkillItem(id)) return false;
+      skillScrollIds.push(id);
+      return true;
+    }
+
+    function removeSkillScroll(id) {
+      skillScrollIds = skillScrollIds.filter(x => x !== id);
+    }
+
+    function learnSkillFromScroll(id) {
+      if (!hasSkillScroll(id)) return false;
+      const skill = getSkillById(id);
+      if (!skill) return false;
+      if (!checkSkillRequirement(skill)) return false;
+      removeSkillScroll(id);
+      const learned = addSkill(id);
+      if (skill.type === 'method' && !equippedMethodId) {
+        equippedMethodId = skill.id;
+      }
+      return learned;
+    }
+
+    function sellSkillScroll(id) {
+      if (!hasSkillScroll(id)) return false;
+      removeSkillScroll(id);
+      spiritStones += 10000;
+      return true;
+    }
+
+
+    function migrateIncompatibleLearnedSkills() {
+      // 将“已掌握但灵根不符”的功法/秘籍/武技移回卷轴列表（可出售/待再次学习）
+      // 返回被迁移的技能 id 列表
+      if (!Array.isArray(learnedSkillIds) || learnedSkillIds.length === 0) return [];
+      const moved = [];
+      learnedSkillIds = learnedSkillIds.filter(id => {
+        const s = getSkillById(id);
+        if (!s) return false;
+        if (checkSkillRequirement(s)) return true;
+        moved.push(id);
+        if (!skillScrollIds.includes(id)) skillScrollIds.push(id);
+        return false;
+      });
+      if (equippedMethodId && moved.includes(equippedMethodId)) {
+        equippedMethodId = null;
+      didMigrateIncompatibleSkills = false;
+      }
+      return moved;
+    }
+
+    function runOneTimeSkillMigrationAfterLoad() {
+      // 仅用于修复旧存档：把“灵根不符但已掌握”的技能移回卷轴
+      if (didMigrateIncompatibleSkills) return;
+      if (!gameStarted) return;
+      if (!lingRoots || lingRoots.length === 0) return;
+
+      const moved = migrateIncompatibleLearnedSkills();
+      didMigrateIncompatibleSkills = true;
+
+      // 若主修心法被迁移，确保主修心法有效
+      const method = getEquippedMethodSkill();
+      if (method && !checkSkillRequirement(method)) {
+        equippedMethodId = null;
+      }
+
+      // 存档一次，保证迁移结果写回当前槽位
+      saveGame();
+
+      // 不强弹窗，避免打断；若你想提示，可在这里加 toast
+    }
+
+
+
 
     function getSkillRarityMeta(skill) {
       return SKILL_RARITY_META[skill.rarity] || SKILL_RARITY_META.common;
@@ -1900,7 +1991,10 @@ const ALL_SKILLS = {
 
     function getEquippedMethodSkill() {
       if (!equippedMethodId) return null;
-      return ALL_SKILLS[equippedMethodId] || null;
+      const s = ALL_SKILLS[equippedMethodId] || null;
+      if (!s) return null;
+      if (!checkSkillRequirement(s)) return null;
+      return s;
     }
 
     function getMethodQiMult() {
@@ -2211,11 +2305,21 @@ const ALL_SKILLS = {
       } else {
         learnedSkillIds = [];
       }
-      if (typeof data.equippedMethodId === 'string' && ALL_SKILLS[data.equippedMethodId]) {
+      
+      if (Array.isArray(data.skillScrollIds)) {
+        skillScrollIds = data.skillScrollIds
+          .filter(id => !!ALL_SKILLS[id] && !learnedSkillIds.includes(id));
+      } else {
+        skillScrollIds = [];
+      }
+
+if (typeof data.equippedMethodId === 'string' && ALL_SKILLS[data.equippedMethodId]) {
         equippedMethodId = data.equippedMethodId;
       } else {
         equippedMethodId = null;
       }
+
+      didMigrateIncompatibleSkills = !!data.didMigrateIncompatibleSkills;
 
       recalcDerivedStats();
     }
@@ -2245,7 +2349,9 @@ const ALL_SKILLS = {
         immortalTitle,
         immortalTitleUnlocked,
         learnedSkillIds,
+        skillScrollIds,
         equippedMethodId,
+        didMigrateIncompatibleSkills,
         washConfirmEnabled,
         lastSaveTime: Date.now()
       };
@@ -2271,6 +2377,7 @@ const ALL_SKILLS = {
         activeSlot = slot;
         localStorage.setItem(ACTIVE_SLOT_KEY, String(activeSlot));
         gameStarted = !!(playerName && playerName.trim());
+        runOneTimeSkillMigrationAfterLoad();
         return true;
       } catch (e) {
         console.error('读取存档失败：', e);
@@ -2296,6 +2403,7 @@ const ALL_SKILLS = {
             loadFromData(data);
             activeSlot = 0;
             gameStarted = !!(playerName && playerName.trim());
+            runOneTimeSkillMigrationAfterLoad();
             saveGameToSlot(0);
             localStorage.setItem(ACTIVE_SLOT_KEY, '0');
             localStorage.removeItem('xiuxianIdleSave_v9');
@@ -2523,7 +2631,7 @@ const ALL_SKILLS = {
       const method = getEquippedMethodSkill();
       if (!method) {
         activeMethodInfo.textContent =
-          '当前未主修任何心法。可前往「宗门」学习与灵根契合的功法，以进一步提升修炼速度。';
+          '当前未主修任何心法。你可在「宗门」或战斗中获得功法卷轴，并在此处点击「学习」以掌握。';
       } else {
         const rar = getSkillRarityMeta(method);
         const bonusPercent = method.qiSpeedBonus ? Math.round(method.qiSpeedBonus * 100) : 0;
@@ -2532,16 +2640,97 @@ const ALL_SKILLS = {
           `效果：修炼速度 +${bonusPercent}%。`;
       }
 
+      knownSkillsList.innerHTML = '';
+
+      // ===== 已掌握 =====
+      const learnedTitle = document.createElement('div');
+      learnedTitle.style.fontWeight = '700';
+      learnedTitle.style.margin = '6px 0 8px';
+      learnedTitle.style.color = '#d7dbff';
+      learnedTitle.textContent = '已掌握';
+      knownSkillsList.appendChild(learnedTitle);
+
       if (!learnedSkillIds.length) {
-        knownSkillsList.textContent = '你尚未掌握任何功法或武技。';
+        const empty = document.createElement('div');
+        empty.style.opacity = '0.9';
+        empty.textContent = '你尚未掌握任何功法或武技。';
+        knownSkillsList.appendChild(empty);
+      } else {
+        learnedSkillIds.forEach(id => {
+          const skill = getSkillById(id);
+          if (!skill) return;
+          const rar = getSkillRarityMeta(skill);
+          const wrapper = document.createElement('div');
+          wrapper.className = 'skill-item';
+
+          const left = document.createElement('div');
+          left.className = 'skill-left';
+          const typeLabel =
+            skill.type === 'method' ? '心法'
+            : skill.type === 'manual' ? '秘籍'
+            : '武技';
+
+          left.innerHTML =
+            `<div class="skill-name ${rar.className}">${skill.name}（${rar.label}·${typeLabel}）</div>` +
+            `<div>${skill.desc || ''}</div>`;
+
+          const right = document.createElement('div');
+          right.style.display = 'flex';
+          right.style.flexDirection = 'column';
+          right.style.alignItems = 'flex-end';
+          right.style.gap = '6px';
+
+          const reqText = getSkillRequirementText(skill);
+          const spanReq = document.createElement('div');
+          spanReq.style.fontSize = '11px';
+          spanReq.style.color = '#9aa0c6';
+          spanReq.textContent = reqText;
+          right.appendChild(spanReq);
+
+          if (skill.type === 'method') {
+            const btn = document.createElement('button');
+            btn.className = 'btn-small';
+            if (equippedMethodId === skill.id) {
+              btn.textContent = '已主修';
+              btn.disabled = true;
+            } else {
+              btn.textContent = '设为主修';
+              btn.addEventListener('click', () => {
+                equippedMethodId = skill.id;
+                updateUI();
+                saveGame();
+              });
+            }
+            right.appendChild(btn);
+          }
+
+          wrapper.appendChild(left);
+          wrapper.appendChild(right);
+          knownSkillsList.appendChild(wrapper);
+        });
+      }
+
+      // ===== 待学习卷轴 =====
+      const scrollTitle = document.createElement('div');
+      scrollTitle.style.fontWeight = '700';
+      scrollTitle.style.margin = '14px 0 8px';
+      scrollTitle.style.color = '#d7dbff';
+      scrollTitle.textContent = '待学习卷轴';
+      knownSkillsList.appendChild(scrollTitle);
+
+      if (!skillScrollIds.length) {
+        const empty = document.createElement('div');
+        empty.style.opacity = '0.9';
+        empty.textContent = '暂无未学习卷轴。';
+        knownSkillsList.appendChild(empty);
         return;
       }
 
-      knownSkillsList.innerHTML = '';
-      learnedSkillIds.forEach(id => {
+      skillScrollIds.forEach(id => {
         const skill = getSkillById(id);
         if (!skill) return;
         const rar = getSkillRarityMeta(skill);
+
         const wrapper = document.createElement('div');
         wrapper.className = 'skill-item';
 
@@ -2551,15 +2740,16 @@ const ALL_SKILLS = {
           skill.type === 'method' ? '心法'
           : skill.type === 'manual' ? '秘籍'
           : '武技';
+
         left.innerHTML =
-          `<div class="skill-name ${rar.className}">${skill.name}（${rar.label}·${typeLabel}）</div>` +
+          `<div class="skill-name ${rar.className}">${skill.name}（${rar.label}·${typeLabel}·卷轴）</div>` +
           `<div>${skill.desc || ''}</div>`;
 
         const right = document.createElement('div');
         right.style.display = 'flex';
         right.style.flexDirection = 'column';
         right.style.alignItems = 'flex-end';
-        right.style.gap = '4px';
+        right.style.gap = '6px';
 
         const reqText = getSkillRequirementText(skill);
         const spanReq = document.createElement('div');
@@ -2568,21 +2758,35 @@ const ALL_SKILLS = {
         spanReq.textContent = reqText;
         right.appendChild(spanReq);
 
-        if (skill.type === 'method') {
-          const btn = document.createElement('button');
-          btn.className = 'btn-small';
-          if (equippedMethodId === skill.id) {
-            btn.textContent = '已主修';
-            btn.disabled = true;
-          } else {
-            btn.textContent = '设为主修';
-            btn.addEventListener('click', () => {
-              equippedMethodId = skill.id;
-              updateUI();
-              saveGame();
-            });
-          }
-          right.appendChild(btn);
+        const reqOK = checkSkillRequirement(skill);
+
+        if (reqOK) {
+          const btnLearn = document.createElement('button');
+          btnLearn.className = 'btn-small';
+          btnLearn.textContent = '学习';
+          btnLearn.addEventListener('click', () => {
+            const ok = learnSkillFromScroll(skill.id);
+            if (!ok) {
+              alert('学习失败：请确认灵根要求。');
+              return;
+            }
+            updateUI();
+            saveGame();
+            alert(`学习成功：已掌握「${skill.name}」。`);
+          });
+          right.appendChild(btnLearn);
+        } else {
+          const btnSell = document.createElement('button');
+          btnSell.className = 'btn-small';
+          btnSell.textContent = '出售（10000灵石）';
+          btnSell.addEventListener('click', () => {
+            if (!confirm(`灵根不符，无法学习「${skill.name}」。确定以 10000 灵石出售该卷轴吗？`)) return;
+            const ok = sellSkillScroll(skill.id);
+            if (!ok) return;
+            updateUI();
+            saveGame();
+          });
+          right.appendChild(btnSell);
         }
 
         wrapper.appendChild(left);
@@ -2634,31 +2838,28 @@ const ALL_SKILLS = {
         const btn = document.createElement('button');
         btn.className = 'btn-small';
 
-        const alreadyLearned = hasSkill(skill.id);
+        const alreadyLearned = hasLearnedSkill(skill.id);
+        const alreadyOwnedScroll = hasSkillScroll(skill.id);
         const reqOK = checkSkillRequirement(skill);
         if (alreadyLearned) {
           btn.textContent = '已掌握';
+          btn.disabled = true;
+        } else if (alreadyOwnedScroll) {
+          btn.textContent = '已获得卷轴';
           btn.disabled = true;
         } else if (!reqOK) {
           btn.textContent = '灵根不符';
           btn.disabled = true;
         } else {
-          btn.textContent = '学习';
+          btn.textContent = '购买卷轴';
           btn.disabled = spiritStones < skill.price;
           btn.addEventListener('click', () => {
             if (spiritStones < skill.price) {
-              alert('灵石不足，无法学习此功法。');
-              return;
-            }
-            if (!checkSkillRequirement(skill)) {
-              alert('你的灵根与此功法不符，暂无法修炼。');
+              alert('灵石不足，无法购买此功法卷轴。');
               return;
             }
             spiritStones -= skill.price;
-            addSkill(skill.id);
-            if (skill.type === 'method' && !equippedMethodId) {
-              equippedMethodId = skill.id;
-            }
+            addSkillScroll(skill.id);
             updateUI();
             refreshSectOfferingsUI();
             saveGame();
@@ -2709,11 +2910,14 @@ const ALL_SKILLS = {
         const btn = document.createElement('button');
         btn.className = 'btn-small';
 
-        if (hasSkill(skill.id)) {
+        if (hasLearnedSkill(skill.id)) {
           btn.textContent = '已掌握';
           btn.disabled = true;
+        } else if (hasSkillScroll(skill.id)) {
+          btn.textContent = '已获得卷轴';
+          btn.disabled = true;
         } else {
-          btn.textContent = '购买';
+          btn.textContent = '购买卷轴';
           btn.disabled = spiritStones < skill.price;
           btn.addEventListener('click', () => {
             if (spiritStones < skill.price) {
@@ -2721,7 +2925,7 @@ const ALL_SKILLS = {
               return;
             }
             spiritStones -= skill.price;
-            addSkill(skill.id);
+            addSkillScroll(skill.id);
             updateUI();
             refreshShopSkillsUI();
             saveGame();
@@ -3042,6 +3246,7 @@ const ALL_SKILLS = {
       learnedSkillIds.forEach(id => {
         const s = getSkillById(id);
         if (!s || !s.battle) return;
+        if (!checkSkillRequirement(s)) return;
         const b = s.battle;
         if (b.atkMul) eff.atkMul *= b.atkMul;
         if (b.hpMul) eff.hpMul *= b.hpMul;
@@ -3212,6 +3417,7 @@ const ALL_SKILLS = {
       immortalTitle = '';
       immortalTitleUnlocked = false;
       learnedSkillIds = [];
+      skillScrollIds = [];
       equippedMethodId = null;
 
       localStorage.removeItem(getSlotKey(activeSlot));
@@ -3442,7 +3648,7 @@ const ALL_SKILLS = {
       if (!gameStarted) return null;
       const candidates = Object.values(ALL_SKILLS).filter(skill =>
         (skill.source === 'drop' || skill.source === 'sectAndDrop' || skill.source === 'shopAndDrop') &&
-        !hasSkill(skill.id)
+        !hasAnySkillItem(skill.id)
       );
       if (!candidates.length) return null;
 
@@ -3473,7 +3679,7 @@ const ALL_SKILLS = {
         if (r <= 0) { idx = i; break; }
       }
       const skill = candidates[idx];
-      addSkill(skill.id);
+      addSkillScroll(skill.id);
       return skill;
     }
 
@@ -3502,7 +3708,7 @@ const ALL_SKILLS = {
         rewards.stoneReward > 0  ? `灵石：+${rewards.stoneReward}（总计：${spiritStones}）` : null
       ].filter(Boolean).join(' · ');
       if (droppedSkill) {
-        dropsText += (dropsText ? ' · ' : '') + `新得功法：${droppedSkill.name}`;
+        dropsText += (dropsText ? ' · ' : '') + `新得卷轴：${droppedSkill.name}（前往功法学习）`;
       }
       resultDrops.textContent = dropsText || '本次未获得显著战利品。';
 
