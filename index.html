@@ -963,7 +963,7 @@ button:disabled {
         <div class="panel">
           <h2>灵石市集 · 洗髓丹</h2>
           <div class="hint">
-            洗髓丹可以重塑灵根，仅对已经觉醒灵根的修士有效。当前为测试阶段，价格为 0 灵石。
+            洗髓丹可以重塑灵根，仅对已经觉醒灵根的修士有效。
           </div>
           <div class="upgrade">
             <div class="upgrade-info">
@@ -2195,7 +2195,7 @@ const ALL_SKILLS = {
     const pillBaseStoneCost = 4;
     const caveUpgradeBaseCost = 20;
     const pillUpgradeBaseCost = 15;
-    const washPillBaseCost = 0; // 洗髓丹基础价格（当前为测试：0 灵石）
+    const washPillBaseCost = 200; // 洗髓丹基础价格（当前为测试：0 灵石）
 
     function getCaveQualityName() {
       const idx = Math.min(caveQuality - 1, CAVE_QUALITY_NAMES.length - 1);
@@ -4504,6 +4504,7 @@ if (typeof data.equippedMethodId === 'string' && ALL_SKILLS[data.equippedMethodI
   </script>
 </body>
 </html>
+
 
 
 
