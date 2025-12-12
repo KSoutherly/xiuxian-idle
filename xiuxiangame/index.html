@@ -4026,6 +4026,8 @@ if (typeof data.equippedMethodId === 'string' && ALL_SKILLS[data.equippedMethodI
       const totalExpGain = experience - expBefore;
       const totalStoneReward = stoneReward + (eventInfo.extraStones || 0);
 
+      // 刷新地图下拉（挑战通关可能改变提前解锁）
+      initMaps();
       updateUI();
 
       const shouldShowOverlay = !autoBattle;
