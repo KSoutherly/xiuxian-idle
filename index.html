@@ -2108,6 +2108,11 @@ const ALL_SKILLS = {
     let currentPage = 'cultivation';
     let autoBattle = false;
 
+    // 越级挑战失败惩罚 & 重伤 debuff
+    let overlevelFailStreak = 0;   // 连续越级失败次数（同一地图）
+    let overlevelFailMapId = null; // 记录当前连败对应地图
+    let heavyInjuryUntil = 0;      // 重伤结束时间戳（ms）
+
     let qi = 0;
     let qiPerSecond = 0.1;
     let qiPerClick = 1.0;
@@ -2243,6 +2248,40 @@ const ALL_SKILLS = {
         (pillLevel - 1) * (1 + 0.4 * (pillQuality - 1));
     }
 
+
+    function isHeavyInjured() {
+      return typeof heavyInjuryUntil === 'number' && heavyInjuryUntil > Date.now();
+    }
+
+    function getHeavyInjuryMultipliers() {
+      if (!isHeavyInjured()) return { statMul: 1, qiMul: 1 };
+      return { statMul: 0.9, qiMul: 0.8 };
+    }
+
+    function getEffectiveStats() {
+      const mul = getHeavyInjuryMultipliers().statMul;
+      return {
+        power:    Math.max(0, Math.floor(stats.power * mul)),
+        physique: Math.max(0, Math.floor(stats.physique * mul)),
+        agility:  Math.max(0, Math.floor(stats.agility * mul)),
+        spirit:   Math.max(0, Math.floor(stats.spirit * mul)),
+        root:     Math.max(0, Math.floor(stats.root * mul)),
+        luck:     Math.max(0, Math.floor(stats.luck * mul))
+      };
+    }
+
+    function isOverlevelChallenge(map) {
+      if (!map) return false;
+      const diff = (map.enemyStage || 0) - realmStage;
+      // 仅对明显越级（>= 2 个小境界）触发惩罚，避免误伤轻微跨度
+      return diff >= 2;
+    }
+
+    function resetOverlevelFailStreak() {
+      overlevelFailStreak = 0;
+      overlevelFailMapId = null;
+    }
+
     /* ========== 存档读写逻辑（核心数据 <-> JSON） ========== */
 
     function loadFromData(data) {
@@ -2313,6 +2352,10 @@ const ALL_SKILLS = {
         skillScrollIds = [];
       }
 
+      overlevelFailStreak = typeof data.overlevelFailStreak === 'number' ? Math.max(0, Math.floor(data.overlevelFailStreak)) : 0;
+      overlevelFailMapId = typeof data.overlevelFailMapId === 'string' ? data.overlevelFailMapId : null;
+      heavyInjuryUntil = typeof data.heavyInjuryUntil === 'number' ? data.heavyInjuryUntil : 0;
+
 if (typeof data.equippedMethodId === 'string' && ALL_SKILLS[data.equippedMethodId]) {
         equippedMethodId = data.equippedMethodId;
       } else {
@@ -2350,6 +2393,9 @@ if (typeof data.equippedMethodId === 'string' && ALL_SKILLS[data.equippedMethodI
         immortalTitleUnlocked,
         learnedSkillIds,
         skillScrollIds,
+        overlevelFailStreak,
+        overlevelFailMapId,
+        heavyInjuryUntil,
         equippedMethodId,
         didMigrateIncompatibleSkills,
         washConfirmEnabled,
@@ -3193,13 +3239,17 @@ if (typeof data.equippedMethodId === 'string' && ALL_SKILLS[data.equippedMethodI
     /* ========== 游历属性 ========= */
 
     function getPlayerBattleStats() {
+      const effStats = getEffectiveStats();
       const expBuff = 1 + Math.min(experience * 0.002, 0.5);
-      const maxHp = 90 + stats.physique * 9 + stats.root * 6;
-      const mpMax = 50 + stats.spirit * 5;
-      const atk = (10 + stats.power * 2) * expBuff;
-      let dodge = 0.05 + stats.agility * 0.006;
+
+      const maxHp = 90 + effStats.physique * 9 + effStats.root * 6;
+      const mpMax = 50 + effStats.spirit * 5;
+      const atk = (10 + effStats.power * 2) * expBuff;
+
+      let dodge = 0.05 + effStats.agility * 0.006;
       if (dodge > 0.45) dodge = 0.45;
-      const spd = 100 + stats.agility * 2;
+
+      const spd = 100 + effStats.agility * 2;
 
       return {
         maxHp: Math.floor(maxHp),
@@ -3209,8 +3259,8 @@ if (typeof data.equippedMethodId === 'string' && ALL_SKILLS[data.equippedMethodI
         atk: Math.floor(atk),
         dodge,
         spd,
-        phys: stats.physique,
-        root: stats.root
+        phys: effStats.physique,
+        root: effStats.root
       };
     }
 
@@ -3419,6 +3469,8 @@ if (typeof data.equippedMethodId === 'string' && ALL_SKILLS[data.equippedMethodI
       learnedSkillIds = [];
       skillScrollIds = [];
       equippedMethodId = null;
+      resetOverlevelFailStreak();
+      heavyInjuryUntil = 0;
 
       localStorage.removeItem(getSlotKey(activeSlot));
 
@@ -3469,7 +3521,7 @@ if (typeof data.equippedMethodId === 'string' && ALL_SKILLS[data.equippedMethodI
       qpsSpan.textContent = effectiveQps.toFixed(1);
       qpcSpan.textContent = effectiveQpc.toFixed(1);
 
-      realmSpan.textContent = getRealmNameFromStage(realmStage);
+      realmSpan.textContent = getRealmNameFromStage(realmStage) + (isHeavyInjured() ? '（重伤）' : '');
 
       expMainSpan.textContent = experience;
       const expReq = getCurrentExpRequirementForBreak(realmStage, experience);
@@ -3719,6 +3771,11 @@ if (typeof data.equippedMethodId === 'string' && ALL_SKILLS[data.equippedMethodI
       } else {
         extra = `当前境界：${getRealmNameFromStage(realmStage)}。`;
       }
+      // 越级挑战失败惩罚提示
+      if (battleData && battleData.overlevelPenaltyNote) {
+        extra += (extra ? ' ' : '') + battleData.overlevelPenaltyNote;
+      }
+
       resultExtra.textContent = extra;
 
       randomEventDiv.textContent = eventInfo.text || '本次未触发奇遇。';
@@ -3767,6 +3824,50 @@ if (typeof data.equippedMethodId === 'string' && ALL_SKILLS[data.equippedMethodI
 
       const abilityBefore = battleData.abilityBefore;
       const expBefore = battleData.expBefore;
+
+      // ===== 越级挑战失败惩罚（仅在失败时触发）=====
+      let overlevelPenaltyNote = '';
+      if (outcome === 'lose' && isOverlevelChallenge(map)) {
+        if (overlevelFailMapId !== map.id) {
+          overlevelFailMapId = map.id;
+          overlevelFailStreak = 0;
+        }
+        overlevelFailStreak += 1;
+
+        const diff = Math.max(0, (map.enemyStage || 0) - realmStage);
+        if (overlevelFailStreak === 1) {
+          // 第一次失败：扣一部分真气（随越级幅度增加，最多 12%）
+          let pct = 0.03 + 0.01 * diff; // 例如 diff=2 -> 5%
+          if (pct > 0.12) pct = 0.12;
+          const lost = Math.max(1, Math.floor(qi * pct));
+          qi = Math.max(0, qi - lost);
+          overlevelPenaltyNote = `越级挑战失败惩罚：真气 -${lost.toFixed(0)}（${(pct * 100).toFixed(1)}%）。`;
+        } else if (overlevelFailStreak === 2) {
+          // 第二次失败：扣能力点（20%，至少 1 点）
+          if (abilityPoints > 0) {
+            const loss = Math.min(abilityPoints, Math.max(1, Math.floor(abilityPoints * 0.2)));
+            abilityPoints -= loss;
+            overlevelPenaltyNote = `越级挑战失败惩罚：能力点 -${loss}。`;
+          } else {
+            overlevelPenaltyNote = '越级挑战失败惩罚：本次应扣能力点，但你当前没有可用能力点。';
+          }
+        } else {
+          // 第三次及以后：触发重伤 debuff（10分钟）
+          heavyInjuryUntil = Math.max(heavyInjuryUntil, Date.now() + 10 * 60 * 1000);
+          overlevelPenaltyNote = '越级挑战失败惩罚：触发【重伤】（10分钟）——全属性 -10%，真气获取速度 -20%。';
+        }
+      } else if (outcome === 'win') {
+        // 任意胜利：清空越级连败计数
+        resetOverlevelFailStreak();
+      } else if (!isOverlevelChallenge(map)) {
+        // 非越级地图的失败：不累计连败
+        resetOverlevelFailStreak();
+      }
+
+      battleData.overlevelPenaltyNote = overlevelPenaltyNote;
+      if (overlevelPenaltyNote) {
+        appendBattleLog(overlevelPenaltyNote);
+      }
 
       if (qiReward > 0) gainQi(qiReward, 'battle');
       if (stoneReward > 0) spiritStones += stoneReward;
@@ -3953,8 +4054,8 @@ if (typeof data.equippedMethodId === 'string' && ALL_SKILLS[data.equippedMethodI
           atk,
           dodge,
           spd,
-          physDef: stats.physique,
-          rootDef: stats.root
+          physDef: pBase.phys,
+          rootDef: pBase.root
         },
         enemy,
         turn: 1,
@@ -3999,6 +4100,12 @@ if (typeof data.equippedMethodId === 'string' && ALL_SKILLS[data.equippedMethodI
       let finalAmount = amount;
       if (['auto','click','battle','event'].includes(source)) {
         finalAmount *= meta.qiMult * methodMult;
+      }
+
+      // 重伤：真气获取速度 -20%
+      const inj = getHeavyInjuryMultipliers();
+      if (['auto','click','battle','event'].includes(source)) {
+        finalAmount *= inj.qiMul;
       }
 
       const oldStage = realmStage;
