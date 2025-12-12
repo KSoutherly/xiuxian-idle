@@ -1804,7 +1804,7 @@ const ALL_SKILLS = {
     battle: {
       burstDimSlash: true
     },
-    desc: '限定空间灵根者修炼。战斗中可在某一回合斩出次元裂缝，对敌人造成约 2000% 的普通攻击伤害。'
+    desc: '限定空间灵根者修炼。战斗中将在 20 回合内随机一回合斩出次元裂缝，对敌人造成约 500% 的普通攻击伤害。'
   },
 
   /* ======================
@@ -3844,11 +3844,11 @@ if (typeof data.equippedMethodId === 'string' && ALL_SKILLS[data.equippedMethodI
           }
         }
 
-        // 次元裂斩（如果存在）
-        if (eff.burstDimSlash && !b.skillState.dimSlashUsed) {
+        // 次元裂斩（如果存在：20回合内随机一次触发）
+        if (eff.burstDimSlash && !b.skillState.dimSlashUsed && b.turn >= (b.skillState.dimSlashTargetTurn || 1)) {
           b.skillState.dimSlashUsed = true;
           const baseDmg = calcDamage(b.player.atk, b.enemy.physique, b.enemy.root);
-          const skillDmg = Math.floor(baseDmg * 20); // 约 2000% 伤害
+          const skillDmg = Math.floor(baseDmg * 5); // 约 500% 伤害
           b.enemy.hp = Math.max(0, b.enemy.hp - skillDmg);
           appendBattleLog(
             `回合 ${b.turn}：你施展「次元裂斩」，斩出维度裂痕，对「${b.enemy.name}」造成 ${skillDmg} 点毁灭性伤害！`
@@ -3963,7 +3963,7 @@ if (typeof data.equippedMethodId === 'string' && ALL_SKILLS[data.equippedMethodI
         map,
         abilityBefore: abilityPoints,
         expBefore: experience,
-        skillState: {}
+        skillState: { dimSlashUsed: false, dimSlashTargetTurn: (Math.floor(Math.random() * 20) + 1) }
       };
 
       battleLogDiv.innerHTML = '';
